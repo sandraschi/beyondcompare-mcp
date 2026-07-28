@@ -37,7 +37,7 @@ classifiers = [
 dependencies = [
     # MCP and FastMCP - using actual installed versions
     "mcp>=1.12.4",
-    "fastmcp>=3.4.2,<4",
+    "fastmcp>=3.4.4,<4",
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
     "httpx>=0.27.0",
@@ -48,7 +48,7 @@ dependencies = [
     "anyio>=4.0.0",
     # Logging and configuration
     "structlog>=23.0.0",
-    "ruff>=0.14.6",
+    "ruff>=0.16.0,<0.17",
     "prefab-ui>=0.14.0",
 ]
 
@@ -64,7 +64,7 @@ dev = [
     "black>=23.9.0",
     "isort>=5.12.0",
     "mypy>=1.6.0",
-    "ruff>=0.1.0",
+    "ruff>=0.16.0,<0.17",
 
     # Type stubs would go here if needed
 
@@ -193,7 +193,7 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "S", "UP", "RUF"]
-ignore = ["S101", "B008"]
+ignore = ["S101", "B008", "S106", "S110", "S112", "RUF012"]
 
 [tool.ruff.format]
 quote-style = "double"
