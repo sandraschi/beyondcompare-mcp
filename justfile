@@ -1,11 +1,11 @@
-set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
+set windows-shell := ["powershell.exe", "-NoProfile", "-Command"]
 import 'scripts/just/fleet.just'
 
 # Open the interactive recipe dashboard in the browser
 default:
     @just --list
 
-# ── Quality ───────────────────────────────────────────────────────────────────
+# --- Quality ---
 
 # Execute Ruff SOTA v13.1 linting
 lint:
@@ -22,7 +22,7 @@ fix:
     Set-Location '{{justfile_directory()}}\web_sota'
     npx @biomejs/biome check --write .
 
-# ── Tests ─────────────────────────────────────────────────────────────────────
+# --- Tests ---
 
 # Run pytest (excludes heavy integration suite)
 test:
@@ -30,7 +30,7 @@ test:
     uv sync --extra dev
     uv run python -m pytest tests -q --ignore=tests/test_integration.py
 
-# ── Hardening ─────────────────────────────────────────────────────────────────
+# --- Hardening ---
 
 # Execute Bandit security audit
 check-sec:
@@ -42,7 +42,9 @@ audit-deps:
     Set-Location '{{justfile_directory()}}'
     uv run safety check
 
-# CUA-NSIS smoke test
-cua-nsis-test:
-    Set-Location '{{justfile_directory()}}'
-    uv run python scripts/cua-smoke.py
+
+# Bootstrap: install dev deps + pre-commit hook
+bootstrap:
+    uv sync --group dev
+    uv run pre-commit install
+    Write-Host "Pre-commit hooks installed." -ForegroundColor Green

@@ -9,8 +9,8 @@ capabilities using Beyond Compare. Built with modern MCP 2.11+ standards.
 # MUST be done BEFORE any imports that might use stdout
 # Antigravity IDE is strict about JSON-RPC protocol and interprets trailing \r as "invalid trailing data"
 # Binary mode prevents Python from automatically converting line endings
-import sys
 import os
+import sys
 import warnings
 
 if os.name == "nt":  # Windows
@@ -129,12 +129,9 @@ import shutil
 import subprocess
 import tempfile
 import time
-import json
-import fnmatch
-import hashlib
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union, Set
+from typing import Any
 
 from fastapi import Body, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -143,18 +140,17 @@ from fastmcp.server import create_proxy
 
 from .config import settings
 from .exceptions import (
-    BeyondCompareError,
-    BeyondCompareNotInstalledError,
     BeyondCompareCommandError,
-    BeyondCompareTimeoutError,
+    BeyondCompareNotInstalledError,
     BeyondCompareScriptError,
+    BeyondCompareTimeoutError,
 )
 from .multimedia_scanner import MultimediaDriveScanner
 from .tools.developer import (
-    DevRepositoryBackup,
-    WorkspaceAnalyzer,
-    RepositoryHealthChecker,
     CodeDuplicateDetector,
+    DevRepositoryBackup,
+    RepositoryHealthChecker,
+    WorkspaceAnalyzer,
 )
 
 logger = logging.getLogger(__name__)
@@ -165,9 +161,9 @@ class BeyondCompareMCP:
 
     def __init__(
         self,
-        bc_path: Optional[str] = None,
-        scripts_dir: Optional[str] = None,
-        mcp: Optional[FastMCP] = None,
+        bc_path: str | None = None,
+        scripts_dir: str | None = None,
+        mcp: FastMCP | None = None,
     ):
         """Initialize the Beyond Compare MCP server.
 
@@ -207,12 +203,10 @@ class BeyondCompareMCP:
         # Register MCP tools
         self._register_tools()
 
-    def _find_bc_executable(self, bc_path: Optional[str] = None) -> Path:
+    def _find_bc_executable(self, bc_path: str | None = None) -> Path:
         """Find the Beyond Compare executable."""
         # If a full path is provided (not just the executable name), verify it exists
-        if bc_path and (
-            Path(bc_path).is_absolute() or "/" in bc_path or "\\" in bc_path
-        ):
+        if bc_path and (Path(bc_path).is_absolute() or "/" in bc_path or "\\" in bc_path):
             path = Path(bc_path).expanduser().resolve()
             if path.exists():
                 return path
@@ -236,22 +230,14 @@ class BeyondCompareMCP:
                     return path
 
         # Check PATH for the executable name (provided or default)
-        bc_exe = (
-            bc_path
-            if bc_path
-            else ("BCompare.exe" if platform.system() == "Windows" else "bcompare")
-        )
+        bc_exe = bc_path if bc_path else ("BCompare.exe" if platform.system() == "Windows" else "bcompare")
         which_bc = shutil.which(bc_exe)
         if which_bc:
             return Path(which_bc)
 
         # If we still haven't found it and a specific executable name was provided, also try the default
-        if bc_path and bc_path != (
-            "BCompare.exe" if platform.system() == "Windows" else "bcompare"
-        ):
-            default_exe = (
-                "BCompare.exe" if platform.system() == "Windows" else "bcompare"
-            )
+        if bc_path and bc_path != ("BCompare.exe" if platform.system() == "Windows" else "bcompare"):
+            default_exe = "BCompare.exe" if platform.system() == "Windows" else "bcompare"
             which_default = shutil.which(default_exe)
             if which_default:
                 return Path(which_default)
@@ -267,8 +253,8 @@ class BeyondCompareMCP:
         def compare_files(
             left_path: str,
             right_path: str,
-            output_report: Optional[str] = None,
-        ) -> Dict[str, Any]:
+            output_report: str | None = None,
+        ) -> dict[str, Any]:
             """Compare two files using Beyond Compare.
 
             Performs a side-by-side comparison of two files using Beyond Compare's
@@ -387,9 +373,9 @@ class BeyondCompareMCP:
         def compare_folders(
             left_path: str,
             right_path: str,
-            output_report: Optional[str] = None,
+            output_report: str | None = None,
             include_subfolders: bool = True,
-        ) -> Dict[str, Any]:
+        ) -> dict[str, Any]:
             """Compare two folders using Beyond Compare.
 
             Performs a comprehensive comparison of two directory structures, identifying
@@ -526,9 +512,7 @@ class BeyondCompareMCP:
                 - compare_files: For comparing individual files
                 - sync_folders: For synchronizing folders based on comparison results
             """
-            return self._compare_folders(
-                left_path, right_path, output_report, include_subfolders
-            )
+            return self._compare_folders(left_path, right_path, output_report, include_subfolders)
 
         @self.mcp.tool()
         def sync_folders(
@@ -536,7 +520,7 @@ class BeyondCompareMCP:
             target_path: str,
             sync_mode: str = "mirror",
             dry_run: bool = True,
-        ) -> Dict[str, Any]:
+        ) -> dict[str, Any]:
             """Synchronize folders using Beyond Compare.
 
             Synchronizes two folders using Beyond Compare's powerful synchronization
@@ -686,10 +670,10 @@ class BeyondCompareMCP:
 
         @self.mcp.tool()
         def multimedia_drive_scanner(
-            drives: Optional[List[str]] = None,
-            recent_days: Optional[int] = None,
-            file_types: Optional[List[str]] = None,
-        ) -> Dict[str, Any]:
+            drives: list[str] | None = None,
+            recent_days: int | None = None,
+            file_types: list[str] | None = None,
+        ) -> dict[str, Any]:
             """Scan multimedia drives for complete inventory of media files.
 
             Scans specified multimedia drives (E:, F:, K:, L:) to create a comprehensive
@@ -811,11 +795,11 @@ class BeyondCompareMCP:
 
         @self.mcp.tool()
         def find_multimedia_duplicates(
-            drives: Optional[List[str]] = None,
+            drives: list[str] | None = None,
             min_size_mb: float = 0.1,
-            file_types: Optional[List[str]] = None,
+            file_types: list[str] | None = None,
             use_content_hash: bool = True,
-        ) -> Dict[str, Any]:
+        ) -> dict[str, Any]:
             """Find duplicate multimedia files across drives.
 
             Identifies duplicate multimedia files across specified drives using either
@@ -950,7 +934,7 @@ class BeyondCompareMCP:
             )
 
         @self.mcp.tool()
-        def detect_usb_drives() -> Dict[str, Any]:
+        def detect_usb_drives() -> dict[str, Any]:
             """Detect connected USB drives for sync operations.
 
             Scans the system for connected USB drives and returns information about
@@ -1069,12 +1053,12 @@ class BeyondCompareMCP:
         def backup_dev_repositories(
             source_path: str,
             backup_path: str,
-            exclude_patterns: Optional[List[str]] = None,
+            exclude_patterns: list[str] | None = None,
             include_git_essentials: bool = True,
             compress: bool = True,
             incremental: bool = True,
             dry_run: bool = False,
-        ) -> Dict[str, Any]:
+        ) -> dict[str, Any]:
             """Smart backup of development repositories with intelligent filtering."""
             return self.dev_backup.backup_repositories(
                 source_path,
@@ -1089,11 +1073,11 @@ class BeyondCompareMCP:
         @self.mcp.tool()
         def analyze_dev_workspace(
             workspace_path: str,
-            report_path: Optional[str] = None,
+            report_path: str | None = None,
             include_git_stats: bool = True,
             include_dependencies: bool = True,
             include_size_analysis: bool = True,
-        ) -> Dict[str, Any]:
+        ) -> dict[str, Any]:
             """Analyze development workspace for insights and optimization opportunities."""
             return self.workspace_analyzer.analyze_workspace(
                 workspace_path,
@@ -1106,35 +1090,31 @@ class BeyondCompareMCP:
         @self.mcp.tool()
         def scan_repo_health(
             repos_path: str,
-            checks: Optional[List[str]] = None,
-            report_path: Optional[str] = None,
+            checks: list[str] | None = None,
+            report_path: str | None = None,
             fix_issues: bool = False,
-        ) -> Dict[str, Any]:
+        ) -> dict[str, Any]:
             """Scan repository health and identify potential issues."""
-            return self.health_checker.scan_repository_health(
-                repos_path, checks, report_path, fix_issues
-            )
+            return self.health_checker.scan_repository_health(repos_path, checks, report_path, fix_issues)
 
         @self.mcp.tool()
         def cleanup_dev_artifacts(
             repos_path: str,
-            targets: Optional[List[str]] = None,
+            targets: list[str] | None = None,
             size_threshold_mb: float = 100,
             dry_run: bool = True,
-        ) -> Dict[str, Any]:
+        ) -> dict[str, Any]:
             """Clean up build artifacts and temporary files across repositories."""
-            return self.health_checker.cleanup_development_artifacts(
-                repos_path, targets, size_threshold_mb, dry_run
-            )
+            return self.health_checker.cleanup_development_artifacts(repos_path, targets, size_threshold_mb, dry_run)
 
         @self.mcp.tool()
         def find_duplicate_code(
             repos_path: str,
-            file_types: Optional[List[str]] = None,
+            file_types: list[str] | None = None,
             min_lines: int = 10,
             similarity_threshold: float = 0.8,
-            report_path: Optional[str] = None,
-        ) -> Dict[str, Any]:
+            report_path: str | None = None,
+        ) -> dict[str, Any]:
             """Find duplicate code across repositories."""
             return self.duplicate_detector.find_duplicate_code(
                 repos_path, file_types, min_lines, similarity_threshold, report_path
@@ -1144,9 +1124,9 @@ class BeyondCompareMCP:
         def compare_workspace_snapshots(
             snapshot1_path: str,
             snapshot2_path: str,
-            report_path: Optional[str] = None,
-            show_changes: Optional[List[str]] = None,
-        ) -> Dict[str, Any]:
+            report_path: str | None = None,
+            show_changes: list[str] | None = None,
+        ) -> dict[str, Any]:
             """Compare workspace snapshots to identify changes over time."""
             return self.duplicate_detector.compare_workspace_snapshots(
                 snapshot1_path, snapshot2_path, report_path, show_changes
@@ -1155,11 +1135,11 @@ class BeyondCompareMCP:
         @self.mcp.tool()
         def selective_restore(
             backup_path: str,
-            restore_items: List[str],
+            restore_items: list[str],
             target_path: str,
             preserve_structure: bool = True,
             overwrite_existing: bool = False,
-        ) -> Dict[str, Any]:
+        ) -> dict[str, Any]:
             """Selectively restore specific projects or files from backup."""
             return self.duplicate_detector.selective_restore(
                 backup_path,
@@ -1171,9 +1151,9 @@ class BeyondCompareMCP:
 
     def _run_bc_command(
         self,
-        args: List[Union[str, Path]],
-        timeout: Optional[int] = None,
-    ) -> Dict[str, Any]:
+        args: list[str | Path],
+        timeout: int | None = None,
+    ) -> dict[str, Any]:
         """Run a Beyond Compare command with proper input validation.
 
         Args:
@@ -1205,7 +1185,7 @@ class BeyondCompareMCP:
                 )
             safe_args.append(arg_str)
 
-        cmd = [str(self.bc_path)] + safe_args
+        cmd = [str(self.bc_path), *safe_args]
 
         try:
             logger.debug(f"Executing: {' '.join(cmd)}")
@@ -1216,9 +1196,7 @@ class BeyondCompareMCP:
                 text=True,
                 check=False,
                 timeout=timeout or settings.COMMAND_TIMEOUT,
-                creationflags=subprocess.CREATE_NO_WINDOW
-                if platform.system() == "Windows"
-                else 0,
+                creationflags=subprocess.CREATE_NO_WINDOW if platform.system() == "Windows" else 0,
             )
 
             # Beyond Compare returns:
@@ -1294,7 +1272,7 @@ class BeyondCompareMCP:
         except Exception as e:
             raise ValueError(f"Invalid path: {path_str}") from e
 
-    def _create_script(self, commands: List[str], script_name: str) -> Path:
+    def _create_script(self, commands: list[str], script_name: str) -> Path:
         """Create a temporary Beyond Compare script file.
 
         Args:
@@ -1335,8 +1313,8 @@ class BeyondCompareMCP:
         self,
         left_path: str,
         right_path: str,
-        output_report: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        output_report: str | None = None,
+    ) -> dict[str, Any]:
         """Compare two files using Beyond Compare."""
         try:
             # Validate and resolve paths
@@ -1379,9 +1357,7 @@ class BeyondCompareMCP:
                 "differences_found": result["has_differences"],
                 "output_report": output_report,
                 "message": (
-                    "Files are identical"
-                    if not result["has_differences"]
-                    else "Differences found between files"
+                    "Files are identical" if not result["has_differences"] else "Differences found between files"
                 ),
             }
 
@@ -1399,9 +1375,9 @@ class BeyondCompareMCP:
         self,
         left_path: str,
         right_path: str,
-        output_report: Optional[str] = None,
+        output_report: str | None = None,
         include_subfolders: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Compare two folders using Beyond Compare."""
         try:
             # Validate and resolve paths
@@ -1434,9 +1410,7 @@ class BeyondCompareMCP:
             if output_report:
                 report_path = self._validate_path(output_report)
                 report_path.parent.mkdir(parents=True, exist_ok=True)
-                script_commands.append(
-                    f'report layout:summary options:display-mismatches output-to:"{report_path}"'
-                )
+                script_commands.append(f'report layout:summary options:display-mismatches output-to:"{report_path}"')
 
             # Add final command to close after completion
             script_commands.append("script-exit")
@@ -1444,7 +1418,7 @@ class BeyondCompareMCP:
             # Create and run script
             script_path = self._create_script(script_commands, "folder_compare")
             try:
-                result = self._run_bc_command([f"@{str(script_path)}"])
+                result = self._run_bc_command([f"@{script_path!s}"])
             finally:
                 # Clean up script file
                 try:
@@ -1460,9 +1434,7 @@ class BeyondCompareMCP:
                 "differences_found": result["has_differences"],
                 "output_report": output_report,
                 "message": (
-                    "Folders are identical"
-                    if not result["has_differences"]
-                    else "Differences found between folders"
+                    "Folders are identical" if not result["has_differences"] else "Differences found between folders"
                 ),
             }
 
@@ -1482,7 +1454,7 @@ class BeyondCompareMCP:
         target_path: str,
         sync_mode: str = "mirror",
         dry_run: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Synchronize folders using Beyond Compare."""
         try:
             # Validate sync mode
@@ -1537,7 +1509,7 @@ class BeyondCompareMCP:
             # Create and run script
             script_path = self._create_script(script_commands, f"sync_{sync_mode}")
             try:
-                result = self._run_bc_command([f"@{str(script_path)}"])
+                result = self._run_bc_command([f"@{script_path!s}"])
             finally:
                 # Clean up script file
                 try:
@@ -1552,9 +1524,7 @@ class BeyondCompareMCP:
                 "sync_mode": sync_mode,
                 "dry_run": dry_run,
                 "changes_detected": result["has_differences"],
-                "message": (
-                    f"Synchronization {'preview' if dry_run else 'completed'} successfully"
-                ),
+                "message": (f"Synchronization {'preview' if dry_run else 'completed'} successfully"),
             }
 
         except Exception as e:
@@ -1600,9 +1570,9 @@ class BeyondCompareMCP:
 
 _gateway_start = time.time()
 _fleet_initialized = False
-_fastapi_app: Optional[FastAPI] = None
-_fleet_mcp: Optional[FastMCP] = None
-_fleet_core: Optional[BeyondCompareMCP] = None
+_fastapi_app: FastAPI | None = None
+_fleet_mcp: FastMCP | None = None
+_fleet_core: BeyondCompareMCP | None = None
 
 
 @asynccontextmanager
@@ -1657,6 +1627,7 @@ def _mount_gateway_routes(app: FastAPI, core: BeyondCompareMCP) -> None:
     async def api_diagnostics():
         try:
             import psutil
+
             cpu = psutil.cpu_percent()
             mem = psutil.virtual_memory().percent
             disk = psutil.disk_usage("/").percent
@@ -1664,7 +1635,11 @@ def _mount_gateway_routes(app: FastAPI, core: BeyondCompareMCP) -> None:
             cpu = mem = disk = None
         return {
             "success": True,
-            "backend": {"port": int(os.environ.get("MCP_PORT", "10841")), "status": "running", "uptime": int(time.time() - _gateway_start)},
+            "backend": {
+                "port": int(os.environ.get("MCP_PORT", "10841")),
+                "status": "running",
+                "uptime": int(time.time() - _gateway_start),
+            },
             "system": {"cpu_percent": cpu, "memory_percent": mem, "disk_percent": disk},
             "tools": {"total": 0},
             "cua_status": {"tesseract_available": False, "window_found": False},
@@ -1714,7 +1689,7 @@ def _mount_gateway_routes(app: FastAPI, core: BeyondCompareMCP) -> None:
         return dict(llm_store)
 
     @app.post("/api/v1/llm/settings")
-    async def llm_settings_post(body: Optional[Dict[str, Any]] = Body(default=None)):
+    async def llm_settings_post(body: dict[str, Any] | None = Body(default=None)):
         data = body if isinstance(body, dict) else {}
         model = str(data.get("model") or "").strip()
         provider = str(data.get("provider") or "ollama").strip()
@@ -1738,8 +1713,8 @@ def _mount_gateway_routes(app: FastAPI, core: BeyondCompareMCP) -> None:
 
 
 def ensure_fleet_stack(
-    bc_path: Optional[str] = None,
-    scripts_dir: Optional[str] = None,
+    bc_path: str | None = None,
+    scripts_dir: str | None = None,
 ) -> tuple[FastAPI, FastMCP, BeyondCompareMCP]:
     """Build (once) the FastAPI + FastMCP unified gateway used by stdio, HTTP, and uvicorn."""
     global _fleet_initialized, _fastapi_app, _fleet_mcp, _fleet_core

@@ -2,36 +2,37 @@
 """Test script to verify Beyond Compare MCP server startup and basic functionality."""
 
 import asyncio
-import sys
-import time
 import subprocess
-from pathlib import Path
+import sys
+
 
 def test_server_import():
     """Test if we can import the server module."""
     try:
         from beyondcompare_mcp.server import BeyondCompareMCP
+
         print("✅ Server import successful")
         return True
     except ImportError as e:
         print(f"❌ Server import failed: {e}")
         return False
 
+
 def test_server_instantiation():
     """Test if we can create a server instance."""
     try:
-        from beyondcompare_mcp.server import BeyondCompareMCP
         from beyondcompare_mcp.exceptions import BeyondCompareNotInstalledError
+        from beyondcompare_mcp.server import BeyondCompareMCP
 
         # Try auto-detection first
         try:
-            server = BeyondCompareMCP()  # Auto-detect BC
+            BeyondCompareMCP()  # Auto-detect BC
             print("✅ Server instantiation successful (BC found)")
             return True
         except BeyondCompareNotInstalledError:
             # If BC not found, try with explicit fake path to test validation
             try:
-                server = BeyondCompareMCP(bc_path="C:\\fake\\path\\BCompare.exe")
+                BeyondCompareMCP(bc_path="C:\\fake\\path\\BCompare.exe")
                 print("❌ Server should have failed with fake path")
                 return False
             except BeyondCompareNotInstalledError:
@@ -41,14 +42,12 @@ def test_server_instantiation():
         print(f"❌ Server instantiation failed: {e}")
         return False
 
+
 def test_cli_help():
     """Test if CLI help command works."""
     try:
         result = subprocess.run(
-            [sys.executable, "-m", "beyondcompare_mcp.cli", "--help"],
-            capture_output=True,
-            text=True,
-            timeout=10
+            [sys.executable, "-m", "beyondcompare_mcp.cli", "--help"], capture_output=True, text=True, timeout=10
         )
         if result.returncode == 0:
             print("✅ CLI help command works")
@@ -61,14 +60,12 @@ def test_cli_help():
         print(f"❌ CLI help test failed: {e}")
         return False
 
+
 def test_cli_version():
     """Test if CLI version command works."""
     try:
         result = subprocess.run(
-            [sys.executable, "-m", "beyondcompare_mcp.cli", "--version"],
-            capture_output=True,
-            text=True,
-            timeout=10
+            [sys.executable, "-m", "beyondcompare_mcp.cli", "--version"], capture_output=True, text=True, timeout=10
         )
         if result.returncode == 0 and "0.1.0" in result.stdout:
             print("✅ CLI version command works")
@@ -82,18 +79,19 @@ def test_cli_version():
         print(f"❌ CLI version test failed: {e}")
         return False
 
+
 async def test_server_startup():
     """Test if server can start up (brief test)."""
     try:
-        from beyondcompare_mcp.server import BeyondCompareMCP
         from beyondcompare_mcp.exceptions import BeyondCompareNotInstalledError
+        from beyondcompare_mcp.server import BeyondCompareMCP
 
         # Create server instance with auto-detection
         try:
             server = BeyondCompareMCP()  # Auto-detect BC
 
             # Try to access the MCP instance
-            if hasattr(server, 'mcp'):
+            if hasattr(server, "mcp"):
                 print("✅ Server has MCP instance")
                 return True
             else:
@@ -108,15 +106,16 @@ async def test_server_startup():
         print(f"❌ Server startup test failed: {e}")
         return False
 
+
 def test_beyond_compare_detection():
     """Test Beyond Compare detection logic."""
     try:
-        from beyondcompare_mcp.server import BeyondCompareMCP
         from beyondcompare_mcp.exceptions import BeyondCompareNotInstalledError
+        from beyondcompare_mcp.server import BeyondCompareMCP
 
         # This should fail gracefully since BC likely isn't installed
         try:
-            server = BeyondCompareMCP()  # Auto-detect BC
+            BeyondCompareMCP()  # Auto-detect BC
             print("✅ Beyond Compare found and detected")
             return True
         except BeyondCompareNotInstalledError:
@@ -130,13 +129,14 @@ def test_beyond_compare_detection():
         print(f"❌ BC detection test failed: {e}")
         return False
 
+
 def test_config_loading():
     """Test configuration loading."""
     try:
         from beyondcompare_mcp.config import settings
 
         # Check if settings object has expected attributes
-        expected_attrs = ['BC_SCRIPTS_DIR', 'COMMAND_TIMEOUT', 'LOG_LEVEL']
+        expected_attrs = ["BC_SCRIPTS_DIR", "COMMAND_TIMEOUT", "LOG_LEVEL"]
         missing_attrs = [attr for attr in expected_attrs if not hasattr(settings, attr)]
 
         if not missing_attrs:
@@ -149,6 +149,7 @@ def test_config_loading():
     except Exception as e:
         print(f"❌ Config loading test failed: {e}")
         return False
+
 
 def main():
     """Run all server tests."""
@@ -184,9 +185,9 @@ def main():
         print(f"❌ Server Startup Test crashed: {e}")
         results.append(False)
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("TEST SUMMARY")
-    print("="*60)
+    print("=" * 60)
 
     passed = sum(results)
     total = len(results)
@@ -206,6 +207,7 @@ def main():
     else:
         print("💥 Some server tests failed. Check errors above.")
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

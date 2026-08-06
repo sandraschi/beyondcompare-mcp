@@ -6,13 +6,12 @@ This script tests the MCP protocol compliance and server functionality.
 """
 
 import asyncio
-import json
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
-import subprocess
-import time
+from unittest.mock import patch
+
 
 # Test MCP protocol functionality
 async def test_mcp_server_startup():
@@ -26,7 +25,7 @@ async def test_mcp_server_startup():
         server = BeyondCompareMCP()
 
         # Verify MCP instance exists
-        if not hasattr(server, 'mcp'):
+        if not hasattr(server, "mcp"):
             print("❌ Server missing MCP instance")
             return False
 
@@ -36,6 +35,7 @@ async def test_mcp_server_startup():
     except Exception as e:
         print(f"❌ MCP server startup failed: {e}")
         return False
+
 
 async def test_mcp_tools_registration():
     """Test if MCP tools are properly registered."""
@@ -47,7 +47,7 @@ async def test_mcp_tools_registration():
         server = BeyondCompareMCP()
 
         # Check if tools are registered (this depends on FastMCP implementation)
-        if hasattr(server.mcp, '_tools') or hasattr(server.mcp, 'tools'):
+        if hasattr(server.mcp, "_tools") or hasattr(server.mcp, "tools"):
             print("✅ MCP tools registration verified")
             return True
         else:
@@ -58,6 +58,7 @@ async def test_mcp_tools_registration():
         print(f"❌ MCP tools registration test failed: {e}")
         return False
 
+
 def test_cli_server_mode():
     """Test if CLI can start server in MCP mode."""
     print("💻 Testing CLI server mode...")
@@ -65,10 +66,7 @@ def test_cli_server_mode():
     try:
         # Test that the CLI can start (will timeout, but should begin startup)
         result = subprocess.run(
-            [sys.executable, "-m", "beyondcompare_mcp.cli", "--help"],
-            capture_output=True,
-            text=True,
-            timeout=5
+            [sys.executable, "-m", "beyondcompare_mcp.cli", "--help"], capture_output=True, text=True, timeout=5
         )
 
         if result.returncode == 0:
@@ -84,6 +82,7 @@ def test_cli_server_mode():
     except Exception as e:
         print(f"❌ CLI server mode test failed: {e}")
         return False
+
 
 async def test_mcp_tool_invocation_simulation():
     """Simulate MCP tool invocation."""
@@ -106,7 +105,7 @@ async def test_mcp_tool_invocation_simulation():
 
             # Test the underlying comparison function directly
             # (simulates what would happen when MCP tool is called)
-            with patch('subprocess.run') as mock_run:
+            with patch("subprocess.run") as mock_run:
                 # Mock successful BC execution
                 mock_run.return_value.returncode = 1  # Differences found
                 mock_run.return_value.stdout = ""
@@ -125,13 +124,14 @@ async def test_mcp_tool_invocation_simulation():
         print(f"❌ MCP tool invocation test failed: {e}")
         return False
 
+
 def test_mcp_error_handling():
     """Test MCP error handling scenarios."""
     print("⚠️  Testing MCP error handling...")
 
     try:
-        from beyondcompare_mcp.server import BeyondCompareMCP
         from beyondcompare_mcp.exceptions import BeyondCompareNotInstalledError
+        from beyondcompare_mcp.server import BeyondCompareMCP
 
         # Test with invalid BC path
         try:
@@ -156,6 +156,7 @@ def test_mcp_error_handling():
     except Exception as e:
         print(f"❌ MCP error handling test failed: {e}")
         return False
+
 
 def test_security_features():
     """Test security features of the MCP server."""
@@ -193,6 +194,7 @@ def test_security_features():
         print(f"❌ Security features test failed: {e}")
         return False
 
+
 async def test_mcp_protocol_simulation():
     """Simulate basic MCP protocol interaction."""
     print("📡 Testing MCP protocol simulation...")
@@ -203,18 +205,10 @@ async def test_mcp_protocol_simulation():
         server = BeyondCompareMCP()
 
         # Simulate MCP protocol messages (basic structure)
-        test_requests = [
-            {
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "tools/list",
-                "params": {}
-            }
-        ]
 
         # The actual MCP handling would be done by FastMCP
         # Here we just verify the server structure supports it
-        if hasattr(server, 'mcp'):
+        if hasattr(server, "mcp"):
             print("✅ MCP protocol structure ready")
             return True
         else:
@@ -224,6 +218,7 @@ async def test_mcp_protocol_simulation():
     except Exception as e:
         print(f"❌ MCP protocol simulation failed: {e}")
         return False
+
 
 def test_configuration_options():
     """Test various configuration options."""
@@ -255,24 +250,22 @@ def test_configuration_options():
         print(f"❌ Configuration options test failed: {e}")
         return False
 
+
 def test_environment_requirements():
     """Test environment requirements."""
     print("🌍 Testing environment requirements...")
 
     try:
         # Test Python version
-        if sys.version_info >= (3, 10):
-            print(f"✅ Python version {sys.version_info.major}.{sys.version_info.minor} OK")
-        else:
-            print(f"❌ Python version {sys.version_info.major}.{sys.version_info.minor} too old")
-            return False
+        print(f"✅ Python version {sys.version_info.major}.{sys.version_info.minor} OK")
 
         # Test imports
         try:
+            import anyio
             import fastmcp
             import mcp
             import pydantic
-            import anyio
+
             print("✅ All required packages importable")
         except ImportError as e:
             print(f"❌ Missing required package: {e}")
@@ -284,10 +277,11 @@ def test_environment_requirements():
         print(f"❌ Environment requirements test failed: {e}")
         return False
 
+
 async def main():
     """Run all MCP server tests."""
     print("🧪 Beyond Compare MCP Server Tests\n")
-    print("="*50)
+    print("=" * 50)
 
     tests = [
         ("Environment Requirements", test_environment_requirements),
@@ -317,9 +311,9 @@ async def main():
             print(f"💥 Test crashed: {e}")
             results.append(False)
 
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("📊 TEST SUMMARY")
-    print("="*50)
+    print("=" * 50)
 
     passed = sum(results)
     total = len(results)
@@ -328,7 +322,7 @@ async def main():
         status = "✅ PASS" if results[i] else "❌ FAIL"
         print(f"{status} {test_name}")
 
-    print(f"\nResults: {passed}/{total} tests passed ({passed/total*100:.1f}%)")
+    print(f"\nResults: {passed}/{total} tests passed ({passed / total * 100:.1f}%)")
 
     if passed == total:
         print("\n🎉 All MCP server tests passed!")
@@ -340,6 +334,7 @@ async def main():
     else:
         print("\n💥 Multiple test failures - server needs fixes")
         return 1
+
 
 if __name__ == "__main__":
     try:

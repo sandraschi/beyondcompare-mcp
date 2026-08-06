@@ -5,10 +5,12 @@
 # Antigravity IDE is strict about JSON-RPC protocol and interprets trailing \r as "invalid trailing data"
 # Binary mode prevents Python from automatically converting line endings
 import os
-if os.name == 'nt':  # Windows
+
+if os.name == "nt":  # Windows
     try:
         import msvcrt
         import sys
+
         # Set stdin/stdout to binary mode to prevent line ending conversion
         # This fixes "invalid trailing data" errors with Antigravity IDE
         try:
@@ -25,26 +27,21 @@ if os.name == 'nt':  # Windows
 import argparse
 import logging
 import sys
-from typing import Optional, List
 
 from .config import settings
 
 
 def setup_logging(log_level: str = "INFO") -> None:
     """Configure logging for the application.
-    
+
     CRITICAL: For MCP servers using stdio transport, logs MUST go to stderr,
     not stdout. stdout is reserved for JSON-RPC messages only.
-    
+
     In stdio mode, we suppress ALL logging to prevent any interference with JSON-RPC.
     """
     # Detect if we're in stdio mode (MCP server)
-    is_stdio_mode = (
-        not sys.stdout.isatty() 
-        or os.getenv("MCP_STDIO_MODE", "").lower() == "true"
-        or "stdio" in sys.argv
-    )
-    
+    is_stdio_mode = not sys.stdout.isatty() or os.getenv("MCP_STDIO_MODE", "").lower() == "true" or "stdio" in sys.argv
+
     if is_stdio_mode:
         # CRITICAL: In stdio mode, suppress ALL logging to prevent stdout pollution
         # Even stderr logging can cause issues if Antigravity is strict about it
@@ -58,7 +55,7 @@ def setup_logging(log_level: str = "INFO") -> None:
         root_logger = logging.getLogger()
         root_logger.setLevel(logging.CRITICAL)
         root_logger.handlers = []
-        for logger_name in ['fastmcp', 'mcp', 'httpx', 'httpcore', 'h11', 'uvicorn', 'asyncio', 'beyondcompare_mcp']:
+        for logger_name in ["fastmcp", "mcp", "httpx", "httpcore", "h11", "uvicorn", "asyncio", "beyondcompare_mcp"]:
             log = logging.getLogger(logger_name)
             log.setLevel(logging.CRITICAL)
             log.handlers = []
@@ -75,7 +72,7 @@ def setup_logging(log_level: str = "INFO") -> None:
         )
 
 
-def parse_args(args: Optional[List[str]] = None) -> argparse.Namespace:
+def parse_args(args: list[str] | None = None) -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description="Beyond Compare MCP Server")
 
@@ -110,7 +107,7 @@ def parse_args(args: Optional[List[str]] = None) -> argparse.Namespace:
     return parser.parse_args(args)
 
 
-def main(args: Optional[List[str]] = None) -> int:
+def main(args: list[str] | None = None) -> int:
     """Run the Beyond Compare MCP server from the command line (fleet transport + gateway)."""
     argv = list(args) if args is not None else sys.argv[1:]
     if "--version" in argv or "-V" in argv:
@@ -149,7 +146,7 @@ def main(args: Optional[List[str]] = None) -> int:
             except (ImportError, OSError, AttributeError):
                 pass
 
-        sys.argv = [sys.argv[0]] + rest
+        sys.argv = [sys.argv[0], *rest]
         from .server import run_gateway_main
 
         run_gateway_main()

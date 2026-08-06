@@ -9,8 +9,9 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
-from beyondcompare_mcp.server import BeyondCompareMCP
+
 from beyondcompare_mcp.exceptions import BeyondCompareNotInstalledError
+from beyondcompare_mcp.server import BeyondCompareMCP
 
 
 class TestBeyondCompareIntegration(unittest.TestCase):
@@ -55,6 +56,7 @@ class TestBeyondCompareIntegration(unittest.TestCase):
     def tearDownClass(cls):
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(cls.test_dir, ignore_errors=True)
 
     def setUp(self):
@@ -72,10 +74,7 @@ class TestBeyondCompareIntegration(unittest.TestCase):
         if not self.bc_available:
             self.skipTest("Beyond Compare not available")
 
-        result = self.server._compare_files(
-            str(self.file1_identical),
-            str(self.file2_identical)
-        )
+        result = self.server._compare_files(str(self.file1_identical), str(self.file2_identical))
 
         # Should succeed and find no differences
         self.assertTrue(result["success"])
@@ -87,10 +86,7 @@ class TestBeyondCompareIntegration(unittest.TestCase):
         if not self.bc_available:
             self.skipTest("Beyond Compare not available")
 
-        result = self.server._compare_files(
-            str(self.file1_different),
-            str(self.file2_different)
-        )
+        result = self.server._compare_files(str(self.file1_different), str(self.file2_different))
 
         # Should succeed
         self.assertTrue(result["success"])
@@ -101,11 +97,7 @@ class TestBeyondCompareIntegration(unittest.TestCase):
         if not self.bc_available:
             self.skipTest("Beyond Compare not available")
 
-        result = self.server._compare_folders(
-            str(self.dir1),
-            str(self.dir2),
-            include_subfolders=True
-        )
+        result = self.server._compare_folders(str(self.dir1), str(self.dir2), include_subfolders=True)
 
         # Should succeed
         self.assertTrue(result["success"])
@@ -119,9 +111,7 @@ class TestBeyondCompareIntegration(unittest.TestCase):
         report_path = self.test_dir / "comparison_report.html"
 
         result = self.server._compare_files(
-            str(self.file1_different),
-            str(self.file2_different),
-            output_report=str(report_path)
+            str(self.file1_different), str(self.file2_different), output_report=str(report_path)
         )
 
         # Should succeed
@@ -138,7 +128,7 @@ class TestBeyondCompareIntegration(unittest.TestCase):
         # Verify BC path is detected and exists
         self.assertIsNotNone(self.server.bc_path)
         self.assertTrue(self.server.bc_path.exists())
-        self.assertTrue(str(self.server.bc_path).endswith(('.exe', 'bcompare')))
+        self.assertTrue(str(self.server.bc_path).endswith((".exe", "bcompare")))
 
     def test_script_file_creation_and_cleanup(self):
         """Test that BC script files are created and cleaned up properly."""
@@ -148,10 +138,7 @@ class TestBeyondCompareIntegration(unittest.TestCase):
         scripts_before = list(self.server.scripts_dir.glob("*.txt"))
 
         # Perform a comparison that requires script creation
-        result = self.server._compare_files(
-            str(self.file1_identical),
-            str(self.file2_identical)
-        )
+        result = self.server._compare_files(str(self.file1_identical), str(self.file2_identical))
 
         # Operation should succeed
         self.assertTrue(result["success"])
@@ -168,10 +155,7 @@ class TestBeyondCompareIntegration(unittest.TestCase):
             self.skipTest("Beyond Compare not available")
 
         # Test with nonexistent left file
-        result = self.server._compare_files(
-            str(self.test_dir / "nonexistent1.txt"),
-            str(self.file1_identical)
-        )
+        result = self.server._compare_files(str(self.test_dir / "nonexistent1.txt"), str(self.file1_identical))
 
         # Should handle gracefully
         self.assertFalse(result["success"])
@@ -183,8 +167,7 @@ class TestBeyondCompareIntegration(unittest.TestCase):
             self.skipTest("Beyond Compare not available")
 
         result = self.server._compare_folders(
-            str(self.test_dir / "nonexistent_dir1"),
-            str(self.test_dir / "nonexistent_dir2")
+            str(self.test_dir / "nonexistent_dir1"), str(self.test_dir / "nonexistent_dir2")
         )
 
         # Should handle gracefully
@@ -205,12 +188,7 @@ class TestBeyondCompareIntegration(unittest.TestCase):
         # Add file to source
         (source_dir / "sync_test.txt").write_text("Content to sync")
 
-        result = self.server._sync_folders(
-            str(source_dir),
-            str(target_dir),
-            sync_mode="mirror",
-            dry_run=True
-        )
+        result = self.server._sync_folders(str(source_dir), str(target_dir), sync_mode="mirror", dry_run=True)
 
         # Should succeed in dry-run mode
         self.assertTrue(result["success"])
@@ -233,12 +211,10 @@ class TestBeyondCompareIntegration(unittest.TestCase):
         large_file2.write_text(content2)
 
         import time
+
         start_time = time.time()
 
-        result = self.server._compare_files(
-            str(large_file1),
-            str(large_file2)
-        )
+        result = self.server._compare_files(str(large_file1), str(large_file2))
 
         end_time = time.time()
         duration = end_time - start_time
@@ -262,10 +238,7 @@ class TestBeyondCompareIntegration(unittest.TestCase):
         file_with_spaces1.write_text("Content 1")
         file_with_spaces2.write_text("Content 2")
 
-        result = self.server._compare_files(
-            str(file_with_spaces1),
-            str(file_with_spaces2)
-        )
+        result = self.server._compare_files(str(file_with_spaces1), str(file_with_spaces2))
 
         # Should handle spaced paths correctly
         self.assertTrue(result["success"])
@@ -282,13 +255,10 @@ class TestBeyondCompareIntegration(unittest.TestCase):
         unicode_content1 = "Hello 世界! 🌍 Café résumé naïve\n测试内容"
         unicode_content2 = "Hello 世界! 🌍 Café résumé naïve\n测试内容 MODIFIED"
 
-        unicode_file1.write_text(unicode_content1, encoding='utf-8')
-        unicode_file2.write_text(unicode_content2, encoding='utf-8')
+        unicode_file1.write_text(unicode_content1, encoding="utf-8")
+        unicode_file2.write_text(unicode_content2, encoding="utf-8")
 
-        result = self.server._compare_files(
-            str(unicode_file1),
-            str(unicode_file2)
-        )
+        result = self.server._compare_files(str(unicode_file1), str(unicode_file2))
 
         # Should handle Unicode content correctly
         self.assertTrue(result["success"])
@@ -308,8 +278,8 @@ class TestEnvironmentValidation(unittest.TestCase):
             self.assertTrue(bc_path.is_file(), f"Beyond Compare path is not a file: {bc_path}")
 
             # On Windows, check it's an .exe file
-            if os.name == 'nt':
-                self.assertTrue(str(bc_path).endswith('.exe'), f"BC executable should be .exe: {bc_path}")
+            if os.name == "nt":
+                self.assertTrue(str(bc_path).endswith(".exe"), f"BC executable should be .exe: {bc_path}")
 
             print(f"✅ Beyond Compare found at: {bc_path}")
 
@@ -323,12 +293,8 @@ class TestEnvironmentValidation(unittest.TestCase):
 
             # Try to run BC with help command to verify it works
             import subprocess
-            result = subprocess.run(
-                [str(server.bc_path), "/?"],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
+
+            result = subprocess.run([str(server.bc_path), "/?"], capture_output=True, text=True, timeout=10)
 
             # Should not crash (exit code may vary)
             self.assertIsNotNone(result)
@@ -351,7 +317,7 @@ if __name__ == "__main__":
         integration_runner = unittest.TextTestRunner(verbosity=2)
         integration_result = integration_runner.run(integration_suite)
 
-        print(f"\n📊 Results:")
+        print("\n📊 Results:")
         print(f"Environment tests: {'✅ PASS' if env_result.wasSuccessful() else '❌ FAIL'}")
         print(f"Integration tests: {'✅ PASS' if integration_result.wasSuccessful() else '❌ FAIL'}")
 

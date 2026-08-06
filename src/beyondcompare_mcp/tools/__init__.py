@@ -5,9 +5,4 @@ This module provides specialized tools for software development workflows
 including repository backup, workspace analysis, and code management.
 """
 
-__all__ = [
-    "DevRepositoryBackup",
-    "WorkspaceAnalyzer", 
-    "RepositoryHealthChecker",
-    "CodeDuplicateDetector"
-]
+__all__ = ["CodeDuplicateDetector", "DevRepositoryBackup", "RepositoryHealthChecker", "WorkspaceAnalyzer"]

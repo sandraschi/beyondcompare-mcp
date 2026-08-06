@@ -5,14 +5,9 @@ Specialized tools for software development workflows including smart backup,
 workspace analysis, health checking, and code duplicate detection.
 """
 
-from .backup import DevRepositoryBackup
 from .analyzer import WorkspaceAnalyzer
-from .health import RepositoryHealthChecker
+from .backup import DevRepositoryBackup
 from .duplicates import CodeDuplicateDetector
+from .health import RepositoryHealthChecker
 
-__all__ = [
-    "DevRepositoryBackup",
-    "WorkspaceAnalyzer",
-    "RepositoryHealthChecker", 
-    "CodeDuplicateDetector"
-]
+__all__ = ["CodeDuplicateDetector", "DevRepositoryBackup", "RepositoryHealthChecker", "WorkspaceAnalyzer"]

@@ -1,11 +1,9 @@
 """Configuration settings for the Beyond Compare MCP server."""
 
-import os
 from pathlib import Path
-from typing import Optional
 
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field, field_validator, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 # Load .env file if it exists
 env_path = Path(__file__).parent.parent.parent / ".env"
@@ -19,9 +17,7 @@ else:
 class Settings(BaseModel):
     """Application settings with environment variable overrides."""
 
-    model_config = ConfigDict(
-        env_file=".env", env_file_encoding="utf-8", case_sensitive=True, extra="forbid"
-    )
+    model_config = ConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=True, extra="forbid")
 
     # Server configuration
     HOST: str = Field(default="127.0.0.1", description="Host to bind the server to")
@@ -29,7 +25,7 @@ class Settings(BaseModel):
     LOG_LEVEL: str = Field(default="INFO", description="Logging level")
 
     # Beyond Compare configuration
-    BEYOND_COMPARE_PATH: Optional[str] = Field(
+    BEYOND_COMPARE_PATH: str | None = Field(
         default=None,
         description="Path to Beyond Compare executable (auto-detected if not specified)",
     )
@@ -40,18 +36,12 @@ class Settings(BaseModel):
     )
 
     # Timeouts in seconds
-    COMMAND_TIMEOUT: int = Field(
-        default=300, description="Timeout for Beyond Compare commands in seconds"
-    )
+    COMMAND_TIMEOUT: int = Field(default=300, description="Timeout for Beyond Compare commands in seconds")
     API_TIMEOUT: int = Field(default=30, description="API request timeout in seconds")
 
     # Package information
-    DXT_PACKAGE_NAME: str = Field(
-        default="beyondcompare-mcp", description="Package name for DXT builds"
-    )
-    DXT_PACKAGE_VERSION: str = Field(
-        default="0.1.0", description="Package version for DXT builds"
-    )
+    DXT_PACKAGE_NAME: str = Field(default="beyondcompare-mcp", description="Package name for DXT builds")
+    DXT_PACKAGE_VERSION: str = Field(default="0.1.0", description="Package version for DXT builds")
 
     @field_validator("LOG_LEVEL")
     @classmethod
@@ -63,7 +53,7 @@ class Settings(BaseModel):
 
     @field_validator("BEYOND_COMPARE_PATH", mode="before")
     @classmethod
-    def validate_bc_path(cls, v: Optional[str]) -> Optional[str]:
+    def validate_bc_path(cls, v: str | None) -> str | None:
         if not v:
             return v
 

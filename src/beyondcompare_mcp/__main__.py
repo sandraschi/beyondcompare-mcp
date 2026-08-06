@@ -2,12 +2,13 @@
 
 # CRITICAL: Set binary mode FIRST, before ANY other imports
 # This is critical for Antigravity IDE compatibility
-import sys
 import os
+import sys
 
-if os.name == 'nt':  # Windows
+if os.name == "nt":  # Windows
     try:
         import msvcrt
+
         # Set stdin/stdout to binary mode to prevent line ending conversion
         # This fixes "invalid trailing data" errors with Antigravity IDE
         try:
@@ -22,10 +23,9 @@ if os.name == 'nt':  # Windows
         pass  # If msvcrt is not available, continue anyway
 
 # Set unbuffered mode
-os.environ.setdefault('PYTHONUNBUFFERED', '1')
+os.environ.setdefault("PYTHONUNBUFFERED", "1")
 
 from .cli import main
 
 if __name__ == "__main__":
     sys.exit(main())
-
