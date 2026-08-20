@@ -632,8 +632,8 @@ class BeyondCompareMCP:
 
                 Update mode (preserve target-only files):
                     result = sync_folders(
-                        source_path='C:/dev/project',
-                        target_path='C:/prod/project',
+                        source_path='D:/projects/project',
+                        target_path='D:/projects/project-backup',
                         sync_mode='update',
                         dry_run=True
                     )
