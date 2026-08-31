@@ -302,7 +302,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ##  Verification Status
 
-- **Package Installation**:  MCPB installs cleanly in Claude Desktop
+- **Package Installation**:  DXT installs cleanly in Claude Desktop
 - **Server Functionality**:  All core features verified working  
 - **Beyond Compare Integration**:  Tested with Beyond Compare 5
 - **Security Features**:  All security tests pass (14/14 unit tests)
@@ -322,4 +322,3 @@ Fleet ports: **10840** (Vite frontend), **10841** (unified **FastAPI + FastMCP**
 3. Open `http://127.0.0.1:10840` (Vite proxies `/api` and `/mcp` to the gateway).
 
 Operator reference: [docs/FLEET_GATEWAY.md](docs/FLEET_GATEWAY.md). Health probe for automation: `GET http://127.0.0.1:10841/api/v1/health`.
-

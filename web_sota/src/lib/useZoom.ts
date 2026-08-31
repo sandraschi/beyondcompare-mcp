@@ -27,4 +27,5 @@ export function useZoom() {
     if (saved) applyZoom(parseFloat(saved));
     return () => window.removeEventListener("wheel", handler);
   }, [applyZoom]);
+  return { zoomIndex };
 }

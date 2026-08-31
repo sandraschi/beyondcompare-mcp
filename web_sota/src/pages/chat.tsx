@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bot, Download, Eraser, Send, Sparkles, User } from "lucide-react";
+import { Bot, Download, Eraser, Send, User } from "lucide-react";
 
 const HISTORY_KEY = "beyondcompare-chat-history";
 const PERSONALITY_KEY = "beyondcompare-chat-personality";

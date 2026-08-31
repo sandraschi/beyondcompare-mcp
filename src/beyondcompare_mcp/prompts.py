@@ -14,7 +14,7 @@ def register_prompts(mcp: FastMCP) -> None:
         return f"""You are helping a developer use Beyond Compare MCP.
 
 1. Ensure Beyond Compare 4+ is installed. Optional: set BEYOND_COMPARE_PATH to BCompare.exe.
-2. Fleet dashboard (if running HTTP): frontend http://127.0.0.1:10840 — API http://127.0.0.1:10841/api/v1/health
+2. Fleet dashboard (if running HTTP): frontend http://127.0.0.1:10840 - API http://127.0.0.1:10841/api/v1/health
 3. For a quick folder diff: call compare_folders(left_path, right_path, include_subfolders=true).
 4. For repo hygiene across clones: call scan_repo_health(repos_path='{workspace_root}').
 5. For multi-step goals use beyondcompare_agentic_workflow(goal=...) when sampling is available (SEP-1577)."""

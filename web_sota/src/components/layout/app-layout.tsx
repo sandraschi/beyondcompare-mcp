@@ -16,7 +16,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     useZoom();
     const [collapsed, setCollapsed] = useState(false);
     const attemptRef = useRef(0);
-    const timerRef = useRef<ReturnType<typeof setTimeout>>();
+    const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
     const tick = useCallback(async () => {
         try {
