@@ -1371,6 +1371,34 @@ class BeyondCompareMCP:
                 "message": f"Comparison failed: {e}",
             }
 
+    @staticmethod
+    def _parse_folder_summary(report_path: str) -> tuple[bool, dict[str, int] | None]:
+        """Verdict from a folder-report summary: orphan/different counts.
+
+        Returns (differences_found, counts) or (False, None) when unreadable.
+        """
+        import re as _re
+
+        try:
+            text = Path(report_path).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            return False, None
+        counts = {"left_orphans": 0, "right_orphans": 0, "different": 0}
+        patterns = {
+            "left_orphans": r"Left Orphan Files \((\d+)\)",
+            "right_orphans": r"Right Orphan Files \((\d+)\)",
+            "different": r"Different Files \((\d+)\)",
+        }
+        found_any = False
+        for key, pattern in patterns.items():
+            m = _re.search(pattern, text)
+            if m:
+                found_any = True
+                counts[key] = int(m.group(1))
+        if not found_any:
+            return False, None
+        return any(v > 0 for v in counts.values()), counts
+
     def _compare_folders(
         self,
         left_path: str,
@@ -1406,35 +1434,63 @@ class BeyondCompareMCP:
                 "select all.files",
             ]
 
-            # Add report generation if requested
+            # Always generate a summary report: BC5 script exit codes do NOT
+            # distinguish identical vs different (rc is 0 either way), so the
+            # verdict comes from parsing the orphan/different counts below.
+            # (Also: there is no "script-exit" command in BC5 — it fatals with
+            # rc 106. Scripts simply end at EOF.)
+            import tempfile as _tempfile
+
             if output_report:
                 report_path = self._validate_path(output_report)
                 report_path.parent.mkdir(parents=True, exist_ok=True)
-                script_commands.append(f'report layout:summary options:display-mismatches output-to:"{report_path}"')
-
-            # Add final command to close after completion
-            script_commands.append("script-exit")
+                report_target = str(report_path)
+                _temp_report = None
+            else:
+                _tmp = _tempfile.NamedTemporaryFile(
+                    mode="w", suffix=".txt", prefix="folder_compare_", delete=False
+                )
+                _tmp.close()
+                report_target = _tmp.name
+                _temp_report = report_target
+            script_commands.append(
+                f'folder-report layout:summary options:display-mismatches output-to:"{report_target}"'
+            )
 
             # Create and run script
             script_path = self._create_script(script_commands, "folder_compare")
             try:
                 result = self._run_bc_command([f"@{script_path!s}"])
+                differences_found, counts = self._parse_folder_summary(report_target)
+                if counts is None:
+                    # Report unreadable — fall back to exit-code heuristic.
+                    differences_found = result["has_differences"]
             finally:
                 # Clean up script file
                 try:
                     script_path.unlink(missing_ok=True)
                 except Exception as e:
                     logger.warning(f"Failed to clean up script file {script_path}: {e}")
+                if _temp_report:
+                    try:
+                        Path(_temp_report).unlink(missing_ok=True)
+                    except Exception:
+                        pass
 
+            if counts is None:
+                counts = {"left_orphans": 0, "right_orphans": 0, "different": 0}
             return {
                 "success": True,
                 "left_path": str(left),
                 "right_path": str(right),
                 "include_subfolders": include_subfolders,
-                "differences_found": result["has_differences"],
+                "differences_found": differences_found,
+                "left_orphans": counts["left_orphans"],
+                "right_orphans": counts["right_orphans"],
+                "different_files": counts["different"],
                 "output_report": output_report,
                 "message": (
-                    "Folders are identical" if not result["has_differences"] else "Differences found between folders"
+                    "Folders are identical" if not differences_found else "Differences found between folders"
                 ),
             }
 
@@ -1503,8 +1559,8 @@ class BeyondCompareMCP:
             if dry_run:
                 script_commands[-1] += " preview"
 
-            # Add final command to close after completion
-            script_commands.append("script-exit")
+            # NOTE: no "script-exit" — unknown command in BC5 (fatals rc 106).
+            # Scripts end at EOF.
 
             # Create and run script
             script_path = self._create_script(script_commands, f"sync_{sync_mode}")
@@ -1741,6 +1797,26 @@ def ensure_fleet_stack(
     register_skill_resources(mcp)
     set_core_getter(lambda: core)
     register_agentic_tools(mcp)
+
+    # Mount MCP streamable HTTP on the gateway. from_fastapi() only converts
+    # routes into tools — without this mount POST /mcp 404s while stdio works,
+    # and HTTP peers (e.g. disk-usage-mcp's BC crossconnect) fail at init.
+    # Mirrors disk-usage-mcp's build_app: path="/" avoids the double prefix,
+    # sub-app lifespan entered inside the parent lifespan.
+    from contextlib import asynccontextmanager
+
+    mcp_path = os.environ.get("MCP_PATH", "/mcp")
+    if not any(getattr(r, "path", "") == mcp_path for r in fastapi_app.routes):
+        mcp_http = mcp.http_app(path="/")
+
+        @asynccontextmanager
+        async def _combined_lifespan(parent: FastAPI):
+            async with _fleet_lifespan(parent):
+                async with mcp_http.router.lifespan_context(parent):
+                    yield
+
+        fastapi_app.router.lifespan_context = _combined_lifespan
+        fastapi_app.mount(mcp_path, app=mcp_http)
 
     _fastapi_app = fastapi_app
     _fleet_mcp = mcp
