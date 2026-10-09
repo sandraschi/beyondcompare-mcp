@@ -1,5 +1,6 @@
 """Configuration settings for the Beyond Compare MCP server."""
 
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -30,8 +31,10 @@ class Settings(BaseModel):
         description="Path to Beyond Compare executable (auto-detected if not specified)",
     )
 
+    # Temp script files: %LOCALAPPDATA%, never the CWD - Claude Desktop spawns stdio
+    # servers with cwd=C:\Windows\System32, where mkdir fails (BUG-063).
     BC_SCRIPTS_DIR: str = Field(
-        default=str(Path.cwd() / "bc_scripts"),
+        default=str(Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "beyondcompare-mcp" / "bc_scripts"),
         description="Directory for Beyond Compare script files",
     )
 

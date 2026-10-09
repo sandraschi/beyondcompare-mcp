@@ -95,7 +95,7 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         "--scripts-dir",
         type=str,
         default=settings.BC_SCRIPTS_DIR,
-        help="Directory for temporary script files (default: ./bc_scripts)",
+        help="Directory for temporary script files (default: %%LOCALAPPDATA%%\\beyondcompare-mcp\\bc_scripts)",
     )
 
     parser.add_argument(

@@ -1447,9 +1447,7 @@ class BeyondCompareMCP:
                 report_target = str(report_path)
                 _temp_report = None
             else:
-                _tmp = _tempfile.NamedTemporaryFile(
-                    mode="w", suffix=".txt", prefix="folder_compare_", delete=False
-                )
+                _tmp = _tempfile.NamedTemporaryFile(mode="w", suffix=".txt", prefix="folder_compare_", delete=False)
                 _tmp.close()
                 report_target = _tmp.name
                 _temp_report = report_target
@@ -1489,9 +1487,7 @@ class BeyondCompareMCP:
                 "right_orphans": counts["right_orphans"],
                 "different_files": counts["different"],
                 "output_report": output_report,
-                "message": (
-                    "Folders are identical" if not differences_found else "Differences found between folders"
-                ),
+                "message": ("Folders are identical" if not differences_found else "Differences found between folders"),
             }
 
         except Exception as e:
@@ -1878,6 +1874,11 @@ def run_gateway_main(argv: list[str] | None = None) -> None:
         bc_path=args.bc_path,
         scripts_dir=args.scripts_dir,
     )
+    # Import-time stdio mode swaps sys.stdout for DevNullStdout; only the legacy
+    # BeyondCompareMCP.run() restored it, so on this path every JSON-RPC reply
+    # went into the sink and clients never got an initialize response.
+    if hasattr(sys, "_original_stdout"):
+        sys.stdout = sys._original_stdout
     run_server(get_fleet_mcp(), args=args, server_name="beyondcompare-mcp")
 
 
