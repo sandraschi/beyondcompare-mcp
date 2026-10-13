@@ -2,12 +2,12 @@
   "$schema": "https://glama.ai/mcp/schemas/server.json",
   "maintainers": ["sandraschi"],
   "name": "beyondcompare-mcp",
-  "description": "MCP 2.11+ server for file comparison, multimedia management, and developer workspace tools using Beyond Compare. 13 tools for comparison, sync, diff reports, and code analysis. Beta status.",
+  "description": "FastMCP 3.4 server for file comparison, multimedia management, and developer workspace tools using Beyond Compare. 18 tools for comparison, sync, diff reports, and code analysis. Beta status.",
   "type": "mcp_server",
   "status": "beta",
-  "framework": "MCP 2.11+",
-  "tools": 13,
-  "transport": ["stdio"],
+  "framework": "FastMCP 3.4",
+  "tools": 18,
+  "transport": ["stdio", "http"],
   "keywords": [
     "beyond-compare",
     "file-comparison",
@@ -37,4 +37,3 @@
     }
   }
 }
-

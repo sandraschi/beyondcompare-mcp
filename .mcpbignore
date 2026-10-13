@@ -15,3 +15,10 @@ mcpb/
 .pytest_cache/
 .coverage
 Cargo.lock
+# Batch-edit safety backups must never ship
+*.bak
+*.bak.*
+# Webapp + native sources ship via their own tracks, never in the bundle
+web_sota/
+webapp/
+native/
