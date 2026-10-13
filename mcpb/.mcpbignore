@@ -1,38 +1,24 @@
-# Logic/Dev Bloat
-.venv/
-node_modules/
-__pycache__/
-.ruff_cache/
-.pytest_cache/
+# MCPB Pack Exclusion List
 tests/
-
-# Discovery & Fleet Metadata
-glama.json
-llms.txt
-llms-full.txt
 .git/
-.github/
-.vscode/
-
-# Build Artifacts
+__pycache__/
+*.pyc
+.venv/
 dist/
 build/
-*.mcpb
-
-# Editor / tooling backups (MCPB_PACKAGING_STANDARDS.md section 2.4)
-*.bak
-*.bak.*
-*.bak-*
-*.orig
-*.rej
-
-# Pack build tooling itself -- not runtime code
-mcpb/pack.ps1
-mcpb/verify_pack.py
-pack.ps1
-verify_pack.py
-
-# Non-MCP components detected in this repo
-web_sota/
-native/
+target/
+docs/
 scripts/
+mcpb/
+.cursor/
+.windsurf/
+.pytest_cache/
+.coverage
+Cargo.lock
+# Batch-edit safety backups must never ship
+*.bak
+*.bak-*
+# Webapp + native sources ship via their own tracks, never in the bundle
+web_sota/
+webapp/
+native/
