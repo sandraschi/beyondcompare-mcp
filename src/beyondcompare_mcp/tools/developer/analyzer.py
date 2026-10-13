@@ -190,7 +190,11 @@ class WorkspaceAnalyzer:
         Returns:
             Repository analysis results
         """
-        analysis = {"name": repo_path.name, "path": str(repo_path), "type": self._detect_repository_type(repo_path)}
+        analysis: dict[str, Any] = {
+            "name": repo_path.name,
+            "path": str(repo_path),
+            "type": self._detect_repository_type(repo_path),
+        }
 
         try:
             # Language analysis
@@ -262,7 +266,7 @@ class WorkspaceAnalyzer:
         Returns:
             Language analysis results
         """
-        language_stats = defaultdict(lambda: {"files": 0, "lines": 0})
+        language_stats: defaultdict[str, dict[str, int]] = defaultdict(lambda: {"files": 0, "lines": 0})
 
         try:
             for file_path in repo_path.rglob("*"):
@@ -288,7 +292,7 @@ class WorkspaceAnalyzer:
 
         # Convert to regular dict and calculate percentages
         total_lines = sum(stats["lines"] for stats in language_stats.values())
-        result = {}
+        result: dict[str, Any] = {}
 
         for language, stats in language_stats.items():
             percentage = (stats["lines"] / total_lines * 100) if total_lines > 0 else 0
@@ -308,8 +312,8 @@ class WorkspaceAnalyzer:
         try:
             total_size = 0
             file_count = 0
-            largest_files = []
-            directory_sizes = defaultdict(int)
+            largest_files: list[tuple[str, int]] = []
+            directory_sizes: defaultdict[str, int] = defaultdict(int)
 
             for file_path in repo_path.rglob("*"):
                 if file_path.is_file():
@@ -361,7 +365,7 @@ class WorkspaceAnalyzer:
             Git statistics
         """
         try:
-            git_stats = {}
+            git_stats: dict[str, Any] = {}
 
             # Get current branch
             try:
@@ -432,7 +436,7 @@ class WorkspaceAnalyzer:
         Returns:
             Dependency analysis results
         """
-        dependencies = {}
+        dependencies: dict[str, Any] = {}
 
         # Check for Node.js dependencies
         package_json = repo_path / "package.json"
@@ -494,7 +498,7 @@ class WorkspaceAnalyzer:
             Last modification time as ISO string
         """
         try:
-            latest_time = 0
+            latest_time: float = 0
             for file_path in repo_path.rglob("*"):
                 if file_path.is_file():
                     try:
@@ -521,7 +525,7 @@ class WorkspaceAnalyzer:
         Returns:
             Health analysis results
         """
-        health = {
+        health: dict[str, Any] = {
             "score": 100,  # Start with perfect score
             "issues": [],
             "recommendations": [],
@@ -549,7 +553,7 @@ class WorkspaceAnalyzer:
                 health["recommendations"].append("Add .gitignore to exclude unnecessary files")
 
             # Check for large files (>100MB)
-            large_files = []
+            large_files: list[str] = []
             for file_path in repo_path.rglob("*"):
                 if file_path.is_file():
                     try:
@@ -566,7 +570,7 @@ class WorkspaceAnalyzer:
 
             # Check for common build artifacts
             artifact_patterns = ["node_modules", "__pycache__", "target", "dist", "build"]
-            found_artifacts = []
+            found_artifacts: list[str] = []
             for pattern in artifact_patterns:
                 if list(repo_path.glob(f"**/{pattern}")):
                     found_artifacts.append(pattern)

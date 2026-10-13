@@ -243,7 +243,7 @@ class RepositoryHealthChecker:
         Returns:
             Repository health results
         """
-        health_result = {
+        health_result: dict[str, Any] = {
             "repository": repo_path.name,
             "repository_path": str(repo_path),
             "issues": [],
@@ -398,8 +398,8 @@ class RepositoryHealthChecker:
             fix_issues: Whether to attempt fixes
         """
         try:
-            cleanup_opportunities = []
-            total_cleanup_size = 0
+            cleanup_opportunities: list[dict[str, Any]] = []
+            total_cleanup_size: float = 0
 
             # Check for common build artifacts
             for target in self.DEFAULT_CLEANUP_TARGETS:
@@ -514,7 +514,7 @@ class RepositoryHealthChecker:
         Returns:
             Cleanup analysis results
         """
-        cleanup_result = {
+        cleanup_result: dict[str, Any] = {
             "repository": repo_path.name,
             "repository_path": str(repo_path),
             "cleanup_targets": [],

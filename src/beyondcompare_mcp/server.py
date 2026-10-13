@@ -12,6 +12,7 @@ capabilities using Beyond Compare. Built with modern MCP 2.11+ standards.
 import os
 import sys
 import warnings
+from typing import Any
 
 if os.name == "nt":  # Windows
     try:
@@ -67,7 +68,7 @@ if _is_stdio_mode:
                 return False
 
             @property
-            def buffer(self):
+            def buffer(self) -> Any:
                 import io
 
                 if not hasattr(self, "_bytes"):
@@ -84,7 +85,8 @@ if _is_stdio_mode:
 
         # Store original stdout and replace with null device
         # This will be restored before FastMCP.run()
-        sys._original_stdout = sys.stdout
+        # Intentional stdio-mode stash on the sys module (restored before run()).
+        sys._original_stdout = sys.stdout  # type: ignore[attr-defined]
         sys.stdout = DevNullStdout()
 
     # Suppress deprecation warnings
@@ -129,9 +131,9 @@ import shutil
 import subprocess
 import tempfile
 import time
+from collections.abc import AsyncIterator, Callable, Sequence
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
 
 from fastapi import Body, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -1378,7 +1380,7 @@ class BeyondCompareMCP:
 
     def _run_bc_command(
         self,
-        args: list[str | Path],
+        args: Sequence[str | Path],
         timeout: int | None = None,
     ) -> dict[str, Any]:
         """Run a Beyond Compare command with proper input validation.
@@ -1400,8 +1402,6 @@ class BeyondCompareMCP:
         # Input validation - only allow safe arguments
         safe_args = []
         for arg in args:
-            if arg is None:
-                continue
             arg_str = str(arg)
             # Basic path validation to prevent command injection
             if not self._is_safe_argument(arg_str):
@@ -1879,7 +1879,7 @@ _AGENTIC_TOOLS = ["beyondcompare_agentic_workflow", "beyondcompare_sampling_hint
 
 
 @asynccontextmanager
-async def _fleet_lifespan(fastapi_app: FastAPI):
+async def _fleet_lifespan(fastapi_app: FastAPI) -> AsyncIterator[None]:
     from .log_ring import append_log
 
     append_log({"event": "gateway_startup", "server": "beyondcompare-mcp"})
@@ -1892,7 +1892,7 @@ def _mount_gateway_routes(app: FastAPI, core: BeyondCompareMCP) -> None:
     from .log_ring import append_log
 
     @app.middleware("http")
-    async def _request_ring(request: Request, call_next):
+    async def _request_ring(request: Request, call_next: Callable[..., Any]) -> Any:
         t0 = time.time()
         response = await call_next(request)
         append_log(
@@ -1907,7 +1907,7 @@ def _mount_gateway_routes(app: FastAPI, core: BeyondCompareMCP) -> None:
         return response
 
     @app.get("/api/v1/health")
-    async def api_health():
+    async def api_health() -> dict[str, Any]:
         exe = Path(core.bc_path)
         ok_bc = exe.exists()
         return {
@@ -1927,7 +1927,7 @@ def _mount_gateway_routes(app: FastAPI, core: BeyondCompareMCP) -> None:
         }
 
     @app.get("/api/v1/diagnostics")
-    async def api_diagnostics():
+    async def api_diagnostics() -> dict[str, Any]:
         try:
             import psutil
 
@@ -1955,7 +1955,7 @@ def _mount_gateway_routes(app: FastAPI, core: BeyondCompareMCP) -> None:
         }
 
     @app.get("/api/capabilities")
-    async def api_capabilities():
+    async def api_capabilities() -> dict[str, Any]:
         return {
             "status": "ok",
             "server": {"name": "beyondcompare-mcp", "version": __version__, "fastmcp": "3.x"},
@@ -2145,11 +2145,11 @@ def _mount_gateway_routes(app: FastAPI, core: BeyondCompareMCP) -> None:
     llm_store: dict[str, str] = {"provider": "ollama", "model": ""}
 
     @app.get("/api/v1/llm/settings")
-    async def llm_settings_get():
+    async def llm_settings_get() -> dict[str, str]:
         return dict(llm_store)
 
     @app.post("/api/v1/llm/settings")
-    async def llm_settings_post(body: dict[str, Any] | None = Body(default=None)):
+    async def llm_settings_post(body: dict[str, Any] | None = Body(default=None)) -> dict[str, Any]:
         data = body if isinstance(body, dict) else {}
         model = str(data.get("model") or "").strip()
         provider = str(data.get("provider") or "ollama").strip()
@@ -2158,7 +2158,7 @@ def _mount_gateway_routes(app: FastAPI, core: BeyondCompareMCP) -> None:
         return {"ok": True, "settings": dict(llm_store)}
 
     @app.get("/api/v1/llm/models")
-    async def llm_models():
+    async def llm_models() -> dict[str, Any]:
         import httpx
 
         try:
@@ -2268,7 +2268,7 @@ def _mount_gateway_routes(app: FastAPI, core: BeyondCompareMCP) -> None:
     async def llm_chat_stream(body: dict[str, Any] | None = Body(default=None)) -> StreamingResponse:
         """Streaming backend chat proxy (SSE `data: {"c": chunk}` + `data: [DONE]`)."""
 
-        async def _gen():
+        async def _gen() -> AsyncIterator[str]:
             import json as _json
 
             import httpx
@@ -2404,7 +2404,7 @@ def ensure_fleet_stack(
         mcp_http = mcp.http_app(path="/")
 
         @asynccontextmanager
-        async def _combined_lifespan(parent: FastAPI):
+        async def _combined_lifespan(parent: FastAPI) -> AsyncIterator[None]:
             async with _fleet_lifespan(parent):
                 async with mcp_http.lifespan(parent):
                     yield
@@ -2435,7 +2435,7 @@ def reset_fleet_stack_for_tests() -> None:
 class _LazyFleetASGI:
     """Defer Beyond Compare discovery until first HTTP/MCP request or explicit init."""
 
-    async def __call__(self, scope: dict, receive, send) -> None:
+    async def __call__(self, scope: dict, receive: Any, send: Any) -> None:
         real_app, _, _ = ensure_fleet_stack()
         await real_app(scope, receive, send)
 

@@ -18,7 +18,10 @@ else:
 class Settings(BaseModel):
     """Application settings with environment variable overrides."""
 
-    model_config = ConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=True, extra="forbid")
+    # NOTE: plain BaseModel (not BaseSettings) — .env is loaded explicitly
+    # via load_dotenv() above. pydantic-settings keys (env_file, ...) do not
+    # apply here and are intentionally absent.
+    model_config = ConfigDict(extra="forbid")
 
     # Server configuration
     HOST: str = Field(default="127.0.0.1", description="Host to bind the server to")

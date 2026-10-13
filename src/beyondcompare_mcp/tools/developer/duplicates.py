@@ -313,7 +313,7 @@ class CodeDuplicateDetector:
         Returns:
             List of code file paths
         """
-        code_files = []
+        code_files: list[Path] = []
 
         try:
             for file_type in file_types:

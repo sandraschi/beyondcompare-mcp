@@ -35,10 +35,10 @@ class MultimediaDriveScanner:
     # Minimum file size to consider for processing (avoid tiny files)
     MIN_FILE_SIZE = 1024  # 1KB
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the multimedia scanner."""
-        self.scan_results = {}
-        self.duplicates_cache = {}
+        self.scan_results: dict[str, Any] = {}
+        self.duplicates_cache: dict[str, Any] = {}
 
     def detect_available_drives(self) -> list[str]:
         """Detect which of Sandra's multimedia drives are available.
@@ -92,18 +92,18 @@ class MultimediaDriveScanner:
             recent_cutoff = time.time() - (recent_days * 24 * 60 * 60)
 
         # Build file type filter
-        extensions_filter = set()
+        extensions_filter: set[str] = set()
         if file_types:
             for file_type in file_types:
                 if file_type in self.MEDIA_TYPES:
                     extensions_filter.update(self.MEDIA_TYPES[file_type])
         else:
             # Include all media types
-            for media_type in self.MEDIA_TYPES.values():
-                extensions_filter.update(media_type)
+            for exts in self.MEDIA_TYPES.values():
+                extensions_filter.update(exts)
 
         # Scan each drive
-        scan_results = {}
+        scan_results: dict[str, Any] = {}
         total_files = 0
         total_size = 0
 
@@ -120,9 +120,9 @@ class MultimediaDriveScanner:
                 continue
 
             # Scan drive recursively
-            drive_files = []
+            drive_files: list[dict[str, Any]] = []
             drive_size = 0
-            drive_stats = defaultdict(lambda: {"count": 0, "size": 0})
+            drive_stats: defaultdict[str, dict[str, int]] = defaultdict(lambda: {"count": 0, "size": 0})
 
             try:
                 for root, _dirs, files in os.walk(drive_path):
@@ -196,7 +196,7 @@ class MultimediaDriveScanner:
                 total_size += drive_size
 
             except Exception as e:
-                logger.error(f"Error scanning drive {drive}: {e}", exc_info=True)
+                logger.exception(f"Error scanning drive {drive}: {e}")
                 scan_results[drive] = {"success": False, "error": str(e), "path": str(drive_path)}
 
         scan_time = round(time.time() - start_time, 2)
@@ -345,7 +345,7 @@ class MultimediaDriveScanner:
         Returns:
             List of USB drive information
         """
-        usb_drives = []
+        usb_drives: list[dict[str, Any]] = []
 
         # System/NVMe drives to exclude (C:, D:, N: are NVMe/system drives)
         SYSTEM_DRIVES = ["C:", "D:", "N:"]
@@ -359,7 +359,7 @@ class MultimediaDriveScanner:
                 drives = drives.split("\000")[:-1]  # Remove empty string at end
 
                 # Track physical drives to group partitions
-                physical_drives = {}  # physical_drive_id -> list of drive letters
+                physical_drives: dict[str, list[dict[str, Any]]] = {}  # physical_drive_id -> list of drive letters
 
                 for drive in drives:
                     drive_letter = drive.rstrip("\\")
@@ -609,25 +609,25 @@ class MultimediaDriveScanner:
             )
 
         # Most common duplicate types
-        media_type_counts = defaultdict(int)
+        media_type_counts: defaultdict[str, int] = defaultdict(int)
         for group in duplicate_groups:
             for file_info in group["files"]:
                 media_type_counts[file_info["media_type"]] += 1
 
         if media_type_counts:
-            top_type = max(media_type_counts, key=media_type_counts.get)
+            top_type = max(media_type_counts, key=lambda k: media_type_counts[k])
             recommendations.append(
                 f"📊 Most duplicated media type: {top_type} ({media_type_counts[top_type]} duplicate files)"
             )
 
         # Drive distribution
-        drive_duplicates = defaultdict(int)
+        drive_duplicates: defaultdict[str, int] = defaultdict(int)
         for group in duplicate_groups:
             for file_info in group["files"]:
                 drive_duplicates[file_info["drive"]] += 1
 
         if drive_duplicates:
-            most_duplicate_drive = max(drive_duplicates, key=drive_duplicates.get)
+            most_duplicate_drive = max(drive_duplicates, key=lambda k: drive_duplicates[k])
             recommendations.append(
                 f"💾 Drive with most duplicates: {most_duplicate_drive} "
                 f"({drive_duplicates[most_duplicate_drive]} files)"
@@ -654,7 +654,7 @@ class MultimediaDriveScanner:
         )
 
         # Media type distribution
-        media_distribution = defaultdict(int)
+        media_distribution: defaultdict[str, int] = defaultdict(int)
         for result in scan_results.values():
             if not result.get("success", False):
                 continue
