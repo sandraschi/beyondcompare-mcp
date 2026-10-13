@@ -15,7 +15,7 @@ export default defineConfig({
     strictPort: true,
     host: "127.0.0.1",
     proxy: {
-      "/api": { target: "http://127.0.0.1:11065", changeOrigin: true },
+      "/api": { target: "http://127.0.0.1:10841", changeOrigin: true },
       "/mcp": { target: "http://127.0.0.1:10841", changeOrigin: true },
     },
   },

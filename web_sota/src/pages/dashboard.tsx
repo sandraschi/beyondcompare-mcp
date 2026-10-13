@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 import { Activity, Box, Cpu, GitMerge, Rocket } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
@@ -72,9 +73,12 @@ export function Dashboard() {
         </div>
       )}
 
-      <div
+      <motion.div
         className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
         data-testid="dashboard-kpis"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25 }}
       >
         <Card className="border-slate-800 bg-slate-950/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -145,7 +149,7 @@ export function Dashboard() {
             <p className="text-sm text-slate-300">UI / gateway</p>
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
 
       <Card className="border-slate-800 bg-slate-950/50">
         <CardHeader>
