@@ -45,7 +45,7 @@ export function Actions() {
             {health.isError && (
               <p className="text-rose-400">{(health.error as Error).message}</p>
             )}
-            {health.data && (
+            {health.data?.beyond_compare && (
               <>
                 <p>
                   Beyond Compare:{" "}
@@ -83,20 +83,25 @@ export function Actions() {
             {cap.isError && (
               <p className="text-rose-400">{(cap.error as Error).message}</p>
             )}
-            {cap.data && (
+            {!cap.isLoading && !cap.isError && !cap.data?.tool_surface && (
+              <p className="text-sm text-slate-300">
+                Tool list unavailable — start the backend and retry.
+              </p>
+            )}
+            {cap.data?.tool_surface && (
               <div
                 className="space-y-2 text-sm text-slate-300"
                 data-testid="actions-tools"
               >
                 <p className="text-slate-200">
-                  Atomic ({cap.data.tool_surface.atomic.length})
+                  Atomic ({cap.data.tool_surface.atomic?.length ?? 0})
                 </p>
                 <p className="font-mono break-all">
-                  {cap.data.tool_surface.atomic.join(", ")}
+                  {(cap.data.tool_surface.atomic ?? []).join(", ")}
                 </p>
                 <p className="text-slate-200 pt-2">Agentic</p>
                 <p className="font-mono break-all">
-                  {cap.data.tool_surface.agentic.join(", ")}
+                  {(cap.data.tool_surface.agentic ?? []).join(", ")}
                 </p>
               </div>
             )}

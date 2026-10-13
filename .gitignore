@@ -81,6 +81,10 @@ _dashboard/
 reports/
 !docs/assess-reports/
 
+# CUA smoke screenshots (regenerable per run) — keep run .md reports, drop png
+cua-reports/*.png
+cua-reports/nav/*.png
+
 # Batch-edit safety backups (Batch Mutation Safety rule)
 *.bak
 *.bak.*
