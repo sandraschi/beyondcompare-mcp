@@ -7,10 +7,14 @@
     "beyondcompare-mcp-native-backend"
   ],
   "backend_port": 10841,
+  "sidebar_click_x": 200,
+  "sidebar_first_y": 180,
+  "sidebar_step_y": 59,
   "health_path": "/api/v1/health",
   "diagnostics_path": "/api/v1/diagnostics",
   "feature_smoke_path": "/api/v1/diagnostics",
   "window_title_re": "Beyond Compare MCP",
+  "bridge_ok_text": "System Online",
   "nsis_glob": "native/target/release/bundle/nsis/Beyond Compare MCP_*_x64-setup.exe",
   "uninstall_registry_filter": "*Beyond Compare MCP*",
   "nav_routes": [
@@ -21,6 +25,10 @@
     [
       "Actions",
       "Actions"
+    ],
+    [
+      "Inbox",
+      "Inbox"
     ],
     [
       "Logs",
@@ -43,8 +51,16 @@
       "Tools"
     ],
     [
+      "Skills",
+      "Skills"
+    ],
+    [
       "Settings",
       "Settings"
+    ],
+    [
+      "Help",
+      "Help"
     ]
   ]
 }

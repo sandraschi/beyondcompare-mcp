@@ -8,14 +8,19 @@ New-Item -ItemType Directory -Force -Path $ResourceDir, $DevDir | Out-Null
 
 Write-Host "=== ${RepoName} Tauri Release Build ===" -ForegroundColor Cyan
 
-# Step 1: TypeScript lint gate + frontend build
+# Step 1: TypeScript lint gate + frontend build (bun: fleet package manager)
 $frontendDirs = @("web_sota", "webapp/frontend", "webapp")
 foreach ($dir in $frontendDirs) {
     $frontend = Join-Path $Root $dir
     if (Test-Path "$frontend\package.json") {
         Write-Host "-> [1/4] Building frontend ($dir)..." -ForegroundColor Yellow
         Push-Location $frontend
-        npm install --silent 2>$null
+        $bunExe = Join-Path $env:USERPROFILE ".bun\bin\bun.exe"
+        if (Test-Path -LiteralPath $bunExe) {
+            & $bunExe install --silent 2>$null
+        } else {
+            npm install --silent 2>$null
+        }
 
         Write-Host "  tsc --noEmit..." -ForegroundColor Gray
         $tscOut = npx tsc --noEmit 2>&1
@@ -26,7 +31,11 @@ foreach ($dir in $frontendDirs) {
             throw "TypeScript compilation failed - fix all errors before building NSIS installer"
         }
 
-        npm run build
+        if (Test-Path -LiteralPath $bunExe) {
+            & $bunExe run build
+        } else {
+            npm run build
+        }
         if ($LASTEXITCODE -ne 0) { throw "Frontend build failed" }
         Pop-Location
         break
@@ -115,5 +124,3 @@ if (Test-Path $strayExe) { Remove-Item $strayExe -Force; Write-Host "  Cleaned s
 
 Write-Host "=== Build complete ===" -ForegroundColor Green
 Write-Host "Ship: $nsisDir\*.exe"
-
-

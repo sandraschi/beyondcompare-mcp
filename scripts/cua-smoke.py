@@ -30,9 +30,18 @@ import json
 import os
 import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
+
+try:
+    import tkinter as _tk
+
+    _HAS_TK = True
+except ImportError:
+    _tk = None  # type: ignore[assignment]
+    _HAS_TK = False
 
 # ── Config ────────────────────────────────────────────────────────────
 
@@ -227,6 +236,185 @@ def _show_automation_warning():
     time.sleep(3)
 
 
+class StopRequested(Exception):
+    """Raised when the user hits the on-screen emergency STOP."""
+
+
+_stop_event = threading.Event()
+_go_event = threading.Event()
+_aborted_before_start = {"value": False}
+
+
+def _overlay_thread_main(countdown_seconds: int) -> None:
+    """On-screen safety UI (runs in a daemon thread).
+
+    Phase A: blocking red countdown dialog with an Abort button. The main
+    thread waits for it before touching anything; Abort exits pre-install.
+    Phase B: tiny always-on-top red banner with a STOP button for the whole
+    run. STOP sets _stop_event; test phases check it and unwind to uninstall.
+    The banner is a separate top-level window, so per-window screenshots
+    (PrintWindow captures) never contain it.
+    """
+    assert _tk is not None
+    try:
+        root = _tk.Tk()
+    except Exception as e:
+        log_warn(f"overlay: Tk failed ({e}) - running without on-screen safety UI")
+        _go_event.set()
+        return
+    root.withdraw()
+
+    # ── Phase A: countdown dialog ──
+    remaining = {"n": max(int(countdown_seconds), 0)}
+
+    def _abort():
+        _aborted_before_start["value"] = True
+        _stop_event.set()
+        _go_event.set()
+        try:
+            dialog.destroy()
+        except Exception as e:
+            log_warn(f"overlay abort destroy failed: {e}")
+
+    def _tick():
+        if _aborted_before_start["value"]:
+            return
+        if remaining["n"] <= 0:
+            try:
+                dialog.destroy()
+            except Exception as e:
+                log_warn(f"overlay countdown destroy failed: {e}")
+            _go_event.set()
+            _show_banner(root)
+            return
+        count_var.set(f"Starting in {remaining['n']} s - do not touch mouse/keyboard")
+        remaining["n"] -= 1
+        dialog.after(1000, _tick)
+
+    if remaining["n"] <= 0:
+        _go_event.set()
+        _show_banner(root)
+        root.mainloop()
+        return
+
+    dialog = _tk.Toplevel(root)
+    dialog.title("CUA automation test")
+    dialog.attributes("-topmost", True)
+    dialog.resizable(False, False)
+    dialog.configure(bg="#7f1d1d")
+    _center(dialog, 420, 200)
+    _tk.Label(
+        dialog,
+        text="CUA AUTOMATION TEST\nBeyond Compare MCP",
+        font=("Segoe UI", 13, "bold"),
+        fg="white",
+        bg="#7f1d1d",
+    ).pack(pady=(14, 4))
+    count_var = _tk.StringVar(value="")
+    _tk.Label(dialog, textvariable=count_var, font=("Segoe UI", 10), fg="#fecaca", bg="#7f1d1d").pack(pady=4)
+    _tk.Button(
+        dialog,
+        text="ABORT TEST",
+        font=("Segoe UI", 11, "bold"),
+        fg="white",
+        bg="#dc2626",
+        activebackground="#991b1b",
+        command=_abort,
+        padx=18,
+        pady=6,
+    ).pack(pady=10)
+    dialog.after(200, _tick)
+    root.mainloop()
+
+
+def _center(win, w: int, h: int) -> None:
+    try:
+        win.update_idletasks()
+        sw = win.winfo_screenwidth()
+        sh = win.winfo_screenheight()
+        win.geometry(f"{w}x{h}+{(sw - w) // 2}+{(sh - h) // 2}")
+    except Exception as e:
+        log_warn(f"overlay center failed: {e}")
+
+
+def _show_banner(root) -> None:
+    """Tiny always-on-top red banner with emergency STOP. Self-destroys on stop."""
+    banner = _tk.Toplevel(root)
+    banner.title("CUA running")
+    banner.attributes("-topmost", True)
+    banner.overrideredirect(True)
+    banner.configure(bg="#dc2626")
+    try:
+        sw = banner.winfo_screenwidth()
+        sh = banner.winfo_screenheight()
+        banner.geometry(f"216x64+{sw - 232}+{sh - 140}")
+    except Exception as e:
+        log_warn(f"overlay banner geometry failed: {e}")
+
+    def _stop():
+        _stop_event.set()
+        try:
+            banner.destroy()
+        except Exception as e:
+            log_warn(f"overlay stop destroy failed: {e}")
+
+    _tk.Label(banner, text="CUA TEST RUNNING", font=("Segoe UI", 9, "bold"), fg="white", bg="#dc2626").pack(pady=(6, 0))
+    _tk.Button(
+        banner,
+        text="STOP",
+        font=("Segoe UI", 10, "bold"),
+        fg="#dc2626",
+        bg="white",
+        activebackground="#fecaca",
+        command=_stop,
+        padx=24,
+    ).pack(pady=4)
+
+    def _poll():
+        if _stop_event.is_set():
+            try:
+                banner.destroy()
+            except Exception as e:
+                log_warn(f"overlay poll destroy failed: {e}")
+            return
+        try:
+            banner.after(500, _poll)
+        except Exception as e:
+            log_warn(f"overlay poll reschedule failed: {e}")
+
+    banner.after(500, _poll)
+
+
+def start_safety_overlay(countdown_seconds: int = 15) -> bool:
+    """Show the on-screen warning; block until countdown elapsed or aborted.
+
+    Returns True when the run may proceed, False when the user aborted
+    (caller must exit before installing anything).
+    """
+    if not _HAS_TK:
+        log_warn("overlay: tkinter unavailable - no on-screen warning or STOP button")
+        _go_event.set()
+        return True
+    t = threading.Thread(target=_overlay_thread_main, args=(countdown_seconds,), daemon=True)
+    t.start()
+    _go_event.wait(timeout=max(int(countdown_seconds), 0) + 30)
+    if _aborted_before_start["value"]:
+        log("Run aborted by user at the pre-start warning - nothing was installed")
+        return False
+    return True
+
+
+def stop_safety_overlay() -> None:
+    """Signal run end so the banner destroys itself."""
+    _stop_event.set()
+
+
+def check_stop() -> None:
+    """Raise StopRequested when the user hit emergency STOP."""
+    if _stop_event.is_set():
+        raise StopRequested("emergency STOP pressed at the PC")
+
+
 def cua_ocr_text(window_handle: int = 0, image_path: str = "") -> str:
     """Run OCR on a window screenshot. Returns text."""
     try:
@@ -259,28 +447,29 @@ def cua_click(window_handle: int, x: int, y: int):
 
 
 def _release_mouse():
-    """Release all mouse buttons and dismiss any stray context menu - call after
-    any clicking to prevent stuck input. UIA click_input() on some WebView2/Chromium
-    elements fires through the accessibility Invoke pattern rather than a true
-    synthetic click, which Chromium can map to a contextmenu event when no direct
-    click handler is bound - Escape clears that before the next step."""
+    """Release the left button and dismiss any stray menu - call before and
+    after clicking. Deliberately sends LEFTUP ONLY: a bare RIGHTUP with no
+    preceding RIGHTDOWN makes Windows fire WM_CONTEXTMENU at the cursor,
+    which opened Chromium context menus over the sidebar on every nav step
+    (screenshots showed link/page menus instead of navigation), and a bare
+    MIDDLEUP can trigger autoscroll. LEFTUP without a preceding DOWN is a
+    harmless no-op. Escape dismisses any menu that is already open."""
     try:
         import ctypes
 
         MOUSEEVENTF_LEFTUP = 0x0004
-        MOUSEEVENTF_RIGHTUP = 0x0010
-        MOUSEEVENTF_MIDDLEUP = 0x0040
-        for flag in (MOUSEEVENTF_LEFTUP, MOUSEEVENTF_RIGHTUP, MOUSEEVENTF_MIDDLEUP):
-            ctypes.windll.user32.mouse_event(flag, 0, 0, 0, 0)
+        ctypes.windll.user32.mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
     except Exception as e:
         log_warn(f"mouse-button release failed: {e}")
     try:
         import ctypes
+        import time as _time
 
         VK_ESCAPE = 0x1B
         KEYEVENTF_KEYUP = 0x0002
         ctypes.windll.user32.keybd_event(VK_ESCAPE, 0, 0, 0)
         ctypes.windll.user32.keybd_event(VK_ESCAPE, 0, KEYEVENTF_KEYUP, 0)
+        _time.sleep(0.5)
     except Exception as e:
         log_warn(f"escape key release failed: {e}")
 
@@ -442,13 +631,17 @@ def check_diagnostics():
         resp = http_get(f"{BACKEND_URL}{DIAGNOSTICS_PATH}", timeout=5)
         data = json.loads(resp.read())
         if data.get("success"):
-            d = data["data"]
-            log(f"Backend: {d['backend'].get('status')} v{d['backend'].get('version')}")
+            # Flat shape (this repo): backend/system/tools/cua_status at top level.
+            d = data.get("data", data)
+            backend = d.get("backend", {})
+            log(f"Backend: {backend.get('status')} port={backend.get('port')} uptime={backend.get('uptime')}s")
             log(
-                f"System: CPU {d['system'].get('cpu_percent')}% | Mem {d['system'].get('memory_percent')}% | Disk {d['system'].get('disk_percent')}%"
+                f"System: CPU {d.get('system', {}).get('cpu_percent')}% | Mem {d.get('system', {}).get('memory_percent')}% | Disk {d.get('system', {}).get('disk_percent')}%"
             )
-            log(f"Tools: {d['tools'].get('total')} registered")
-            log(f"CUA: Tesseract={d['cua_status']['tesseract_available']} Window={d['cua_status']['window_found']}")
+            log(f"Tools: {d.get('tools', {}).get('total')} registered")
+            log(
+                f"CUA: Tesseract={d.get('cua_status', {}).get('tesseract_available')} Window={d.get('cua_status', {}).get('window_found')}"
+            )
             if d.get("errors", {}).get("count", 0) > 0:
                 log(f"WARNING: {d['errors']['count']} errors logged")
         else:
@@ -473,6 +666,7 @@ def verify_webview_bridge(output_dir: str):
     # (kicad-mcp, 2026-09-22: confirmed "System Online" appears fine given ~15-20s).
     text = ""
     for attempt in range(6):
+        check_stop()
         win = cua_find_window(WINDOW_TITLE_RE, retry_seconds=2)
         if win:
             _foreground_and_maximize(win.get("handle", 0))
@@ -535,55 +729,115 @@ def _verify_page_ocr(text: str, label: str, expected: str) -> bool:
     return False
 
 
-def _nav_click_element(win_handle: int, wx: int, wy: int, idx: int, label: str = ""):
-    """Click a nav item. Tries title-based UIA matching first, then index, then coordinates."""
+def _history_back() -> None:
+    """Send Alt+Left (WebView2 history-back accelerator) to leave a dead page."""
+    try:
+        import ctypes
+        import time as _time
+
+        VK_MENU = 0x12
+        VK_LEFT = 0x25
+        KEYEVENTF_KEYUP = 0x0002
+        ctypes.windll.user32.keybd_event(VK_MENU, 0, 0, 0)
+        ctypes.windll.user32.keybd_event(VK_LEFT, 0, 0, 0)
+        ctypes.windll.user32.keybd_event(VK_LEFT, 0, KEYEVENTF_KEYUP, 0)
+        ctypes.windll.user32.keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0)
+        _time.sleep(2)
+    except Exception as e:
+        log_warn(f"history-back failed: {e}")
+
+
+def _nav_click_element(win_handle: int, wx: int, wy: int, idx: int, label: str = "", skip_tree: bool = False):
+    """Click a nav item. Tries title-based UIA matching first, then index, then coordinates.
+
+    skip_tree: when the renderer is suspected dead (previous page crashed),
+    UIA tree queries can hang or return garbage - go straight to the
+    calibrated coordinate fallback.
+    """
     import pywinauto
 
-    app = pywinauto.Application(backend="uia").connect(handle=win_handle)
-    w = app.window(handle=win_handle)
+    if skip_tree:
+        log(f"nav '{label}': skipping tree queries (renderer suspected dead)")
+    else:
+        app = pywinauto.Application(backend="uia").connect(handle=win_handle)
+        w = app.window(handle=win_handle)
 
-    # Preferred: match by accessible name (title= is the pywinauto criteria for UIA Name).
-    # Index-based Hyperlink ordering is fragile - sidebar order may differ from nav_routes.
-    if label:
-        try:
-            link = w.descendants(title=label)
-            if link:
-                link[0].click_input()
-                return
-        except Exception as e:
-            log_warn(f"title-match nav failed for {label!r}: {e}")
+        # Preferred: match by accessible name (title= is the pywinauto criteria for UIA Name).
+        # Index-based Hyperlink ordering is fragile - sidebar order may differ from nav_routes.
+        if label:
+            try:
+                link = w.descendants(title=label)
+                if link:
+                    log(f"nav '{label}': title-match ({len(link)} hits)")
+                    link[0].click_input()
+                    return
+            except Exception as e:
+                log_warn(f"title-match nav failed for {label!r}: {e}")
+            try:
+                elements = w.descendants(control_type="Hyperlink")
+                el = [e for e in elements if label.lower() in (e.window_text() or "").lower()]
+                if el:
+                    log(f"nav '{label}': hyperlink-match")
+                    el[0].click_input()
+                    return
+            except Exception as e:
+                log_warn(f"hyperlink nav failed for {label!r}: {e}")
+
+        # Fallback: positional Hyperlink
         try:
             elements = w.descendants(control_type="Hyperlink")
-            el = [e for e in elements if label.lower() in (e.window_text() or "").lower()]
-            if el:
-                el[0].click_input()
+            if idx < len(elements):
+                log(f"nav '{label}': positional hyperlink {idx}")
+                elements[idx].click_input()
                 return
         except Exception as e:
-            log_warn(f"hyperlink nav failed for {label!r}: {e}")
-
-    # Fallback: positional Hyperlink
-    try:
-        elements = w.descendants(control_type="Hyperlink")
-        if idx < len(elements):
-            elements[idx].click_input()
-            return
-    except Exception as e:
-        log_warn(f"positional hyperlink nav failed: {e}")
-    # Try Pane (some WebView versions)
-    try:
-        elements = w.descendants(control_type="Pane")
-        nav_elements = [e for e in elements if e.rectangle().left < wx + 200]
-        nav_elements_sorted = sorted(nav_elements, key=lambda e: e.rectangle().top)
-        if idx < len(nav_elements_sorted):
-            nav_elements_sorted[idx].click_input()
-            return
-    except Exception as e:
-        log_warn(f"pane nav failed: {e}")
+            log_warn(f"positional hyperlink nav failed: {e}")
+        # Try Pane (some WebView versions)
+        try:
+            elements = w.descendants(control_type="Pane")
+            nav_elements = [e for e in elements if e.rectangle().left < wx + 200]
+            nav_elements_sorted = sorted(nav_elements, key=lambda e: e.rectangle().top)
+            if idx < len(nav_elements_sorted):
+                log(f"nav '{label}': pane fallback {idx}")
+                nav_elements_sorted[idx].click_input()
+                return
+        except Exception as e:
+            log_warn(f"pane nav failed: {e}")
 
     # Fallback to coordinate click
     click_x = wx + int(cfg("sidebar_click_x", 30))
     click_y = wy + int(cfg("sidebar_first_y", 90)) + idx * int(cfg("sidebar_step_y", 55))
+    log(f"nav '{label}': coordinate fallback ({click_x}, {click_y})")
     cua_click(win_handle, click_x, click_y)
+
+
+def wait_for_dashboard_online(handle: int, output_dir: str, timeout_seconds: int = 120) -> bool:
+    """Wait until the dashboard shows live data before any clicking.
+
+    The frontend polls the backend on its own interval, so a healthy backend
+    does NOT mean rendered KPIs yet. Polls screenshots for the "online" KPI
+    text; returns True when seen, False on timeout (caller logs and continues -
+    per-page results will show the truth).
+    """
+    deadline = time.monotonic() + timeout_seconds
+    attempt = 0
+    while time.monotonic() < deadline:
+        check_stop()
+        attempt += 1
+        snap_path = os.path.join(output_dir, f"online-wait-{int(time.time())}.png")
+        try:
+            cua_screenshot(handle, snap_path)
+            text = cua_ocr_text(handle, snap_path)
+        except Exception as e:
+            log_warn(f"online-wait snap failed: {e}")
+            text = ""
+        if "online" in text.lower():
+            log(f"Dashboard online confirmed (attempt {attempt}) - KPIs live, starting clicks")
+            return True
+        log(f"Dashboard not online yet (attempt {attempt}) - waiting for badge + KPIs")
+        time.sleep(5)
+    log("Dashboard online NOT seen within timeout - proceeding anyway, per-page results decide")
+    return False
 
 
 def nav_click_through(output_dir: str):
@@ -603,17 +857,33 @@ def nav_click_through(output_dir: str):
     if not win:
         log("No window found for nav click-through")
         return
-    r = win.get("rect", {}) or {}
-    wx = r.get("left", 0) or 0
-    wy = r.get("top", 0) or 0
-    snap_dir = os.path.join(output_dir, "nav")
     handle = win.get("handle", 0)
 
     _foreground_and_maximize(handle)
 
+    # Re-read the rect AFTER maximizing: the pre-maximize rect is stale and
+    # every coordinate-fallback click would otherwise land in the wrong place.
+    win = cua_find_window(WINDOW_TITLE_RE)
+    if not win:
+        log("Window lost after maximize - aborting nav click-through")
+        return
+    r = win.get("rect", {}) or {}
+    wx = r.get("left", 0) or 0
+    wy = r.get("top", 0) or 0
+    handle = win.get("handle", 0)
+    snap_dir = os.path.join(output_dir, "nav")
+
+    wait_for_dashboard_online(handle, output_dir)
+
+    crashed_pages: list[str] = []
+    tree_dead = False
     for idx, (label, expected_header) in enumerate(nav_routes):
+        check_stop()
         try:
-            _nav_click_element(handle, wx, wy, idx, label)
+            # Dismiss any stale menu first: an open menu swallows the click
+            # (menu dismissal eats it) and the navigation silently never happens.
+            _release_mouse()
+            _nav_click_element(handle, wx, wy, idx, label, skip_tree=tree_dead)
             _release_mouse()
             time.sleep(3)
 
@@ -621,13 +891,55 @@ def nav_click_through(output_dir: str):
             os.makedirs(snap_dir, exist_ok=True)
             cua_screenshot(handle, snap_path)
             text = cua_ocr_text(handle, snap_path)
+            # Empty OCR after a settle wait means a black/blank renderer, not
+            # a slow load - re-shot once to be sure before calling it crashed.
+            if not text.strip():
+                time.sleep(5)
+                cua_screenshot(handle, snap_path)
+                text = cua_ocr_text(handle, snap_path)
 
-            _verify_page_ocr(text, label, expected_header)
+            ok = _verify_page_ocr(text, label, expected_header)
+            if not text.strip():
+                log(f"  Page '{label}': CRASHED (blank render) - attempting recovery")
+                crashed_pages.append(label)
+                tree_dead = True
+                # Recovery: history-back out of the dead page, then reset to
+                # a known-good page (Overview via calibrated coordinates).
+                # Either step may fail on a dead renderer - best effort.
+                _history_back()
+                _release_mouse()
+                time.sleep(2)
+                cua_screenshot(handle, snap_path)
+                text = cua_ocr_text(handle, snap_path)
+                if not text.strip():
+                    log("  Recovery via history-back failed - clicking Overview")
+                    cua_click(
+                        handle,
+                        wx + int(cfg("sidebar_click_x", 30)),
+                        wy + int(cfg("sidebar_first_y", 90)),
+                    )
+                    _release_mouse()
+                    time.sleep(3)
+                    cua_screenshot(handle, snap_path)
+                    text = cua_ocr_text(handle, snap_path)
+                    if text.strip():
+                        log("  Recovery via Overview click OK - continuing walk")
+                        tree_dead = False
+                    else:
+                        log("  Recovery failed - renderer still blank, continuing walk")
+                else:
+                    log("  Recovery via history-back OK - continuing walk")
+                    tree_dead = False
+            elif not ok:
+                # Wrong content but alive renderer - keep tree queries enabled.
+                tree_dead = False
         except Exception as e:
             log(f"Nav '{label}' failed (non-fatal): {e}")
             _release_mouse()
 
     _release_mouse()
+    if crashed_pages:
+        phase_fail(f"nav click-through crashed on page(s): {', '.join(crashed_pages)}")
 
 
 # ── Phase 9b: Backend-receipt proof (bypasses webview entirely) ─────────
@@ -817,6 +1129,9 @@ def main():
     print(f"  CUA Smoke Test - {PRODUCT_NAME}")
     print(f"{'=' * 50}\n")
 
+    if not start_safety_overlay(int(cfg("pre_warning_seconds", 15))):
+        return
+
     if not _HAS_PYWAUTO:
         print("  !!! WARNING: pywinauto is not importable in this venv. !!!")
         print("  !!! Every GUI-driven phase will be SILENTLY SKIPPED.   !!!")
@@ -825,11 +1140,26 @@ def main():
 
     try:
         for is_fatal, name, fn in phases:
+            check_stop()
             print(f"  Phase {phases.index((is_fatal, name, fn)) + 1}: {name}")
             try:
                 fn()
                 print(f"  V {name}\n")
                 passed += 1
+            except StopRequested as e:
+                print(f"  STOPPED {name}: {e} - unwinding to uninstall\n")
+                failed += 1
+                for _, uname, ufn in phases:
+                    if uname == "Uninstall":
+                        try:
+                            ufn()
+                            print("  V Uninstall (after STOP)\n")
+                            passed += 1
+                        except Exception as ue:
+                            print(f"  X Uninstall (after STOP): {ue}\n")
+                            failed += 1
+                        break
+                break
             except PhaseFailed:
                 print(f"  X {name}\n")
                 failed += 1
@@ -841,6 +1171,7 @@ def main():
                 if is_fatal:
                     fatal_failed = True
     finally:
+        stop_safety_overlay()
         _release_mouse()
 
     print(f"{'=' * 50}")
