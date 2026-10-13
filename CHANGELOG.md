@@ -1,4 +1,31 @@
 
+## [Unreleased] — 2026-10-13 (deferred pass)
+
+### Security
+- CUA smoke: bare RIGHTUP/MIDDLEUP synthesized WM_CONTEXTMENU on every nav step (proven by screenshots) — now LEFTUP-only + Escape
+- S310 scheme enforcement helper for smoke HTTP probes; dead noqa cleanup
+
+### Added
+- Route contract test (frontend-called /api/* must exist on backend — the missing assfix guard; proven red on the old capabilities path)
+- ENDPOINTS single source of truth in webapp api.ts; all pages off inline literals
+- Playwright e2e: hermetic managed servers, Actions outage regression spec, CI wired
+- CUA safety: on-screen red countdown + always-on-top STOP banner, emergency unwind to uninstall, dashboard-online gate before clicks, crash detection with history-back/Overview recovery, per-branch click logging
+- framer-motion dashboard entrance; pyright in dev deps + CI (mypy and pyright both clean)
+- GitHub release v0.1.0 (.mcpb pair + install.ps1); README one-liner per 2.2b
+- just build-native, full-gate just ci (ruff/fmt/mypy/pyright/pytest/build/biome/e2e)
+
+### Fixed
+- Actions page crash (black window): fetchCapabilities called nonexistent /api/v1/capabilities → {} → unguarded deref unmounted tree; path corrected + throw-on-error + render guards
+- vite /api proxy pointed at dead :11065 (stale Logging-backend port) → :10841
+- ConfigDict held pydantic-settings keys on a plain BaseModel (silently ignored); __init__ exported names it never imported
+- native/build.ps1 used npm (resurrected package-lock.json every build) → bun with npm fallback
+- HelloWorld30 scaffold demo removed (unreferenced, 40 ruff findings)
+- NOREG groundwork: vendored mcp-clients.nsh + install-mcp-clients.ps1 + tauri resources (the !include pattern itself does not build — documented in hooks.nsh, kept direct-exec)
+- CUA smoke: pywinauto/pillow/pytesseract dev deps, diagnostics flat-shape handling, bridge text + nav routes incl. new pages, calibrated sidebar geometry
+
+### Verified
+- CUA-NSIS 12/12 ALL PHASES PASSED (install → title-match nav on all 11 pages → uninstall), screenshots show no menus and live Actions content
+
 ## [Unreleased] — 2026-10-13 (assfix)
 
 ### Security

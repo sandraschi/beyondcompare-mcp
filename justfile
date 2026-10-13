@@ -1,6 +1,9 @@
 set windows-shell := ["powershell.exe", "-NoProfile", "-Command"]
 import 'scripts/just/fleet.just'
 
+# Fleet tools live off-PATH by design; make bun resolvable in every recipe.
+export PATH := env_var('USERPROFILE') + "\\.bun\\bin;" + env_var('PATH')
+
 # Open the interactive recipe dashboard in the browser
 default:
     @just --list
@@ -23,7 +26,7 @@ test:
 
 # --- Serve ---
 
-# Start the backend gateway only (frontend: cd web_sota; npm run dev)
+# Start the backend gateway only (frontend: cd web_sota; bun run dev)
 serve:
     Set-Location '{{justfile_directory()}}'; powershell.exe -NoProfile -File "{{justfile_directory()}}\start.ps1" -BackendOnly
 
@@ -35,9 +38,10 @@ fmt-check:
 
 # --- CI ---
 
-# Local gates (same scope as CI): lint + format check + tests
+# Full local gate set (mirrors .github/workflows/ci.yml): lint, format,
+# both typecheckers, tests, webapp build, biome, e2e.
 ci:
-    Set-Location '{{justfile_directory()}}'; uv run ruff check src/ tests/ scripts/; uv run ruff format src/ tests/ scripts/ --check; uv run python -m pytest tests -q --ignore=tests/test_integration.py
+    Set-Location '{{justfile_directory()}}'; uv run ruff check src/ tests/ scripts/; uv run ruff format src/ tests/ scripts/ --check; uv run mypy src/; uv run pyright src/; uv run python -m pytest tests -q --ignore=tests/test_integration.py; Set-Location '{{justfile_directory()}}\web_sota'; bun run build; bun run biome:ci; bun run e2e
 
 # --- Native (Tauri NSIS) ---
 
