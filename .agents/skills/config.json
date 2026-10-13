@@ -1,0 +1,9 @@
+{
+  "auto_load": ["beyondcompare"],
+  "skills": {
+    "beyondcompare": {
+      "path": "beyondcompare/SKILL.md",
+      "description": "Beyond Compare session start prompt"
+    }
+  }
+}

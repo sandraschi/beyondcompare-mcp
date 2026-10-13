@@ -1,0 +1,6 @@
+{
+  "name": "beyondcompare-mcp",
+  "version": "0.1.0",
+  "description": "Beyond Compare file/folder comparison, sync, and dev-workspace tools",
+  "hooks": "../hooks/hooks.json"
+}
