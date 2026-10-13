@@ -10,7 +10,7 @@
 
 > 📖 **[Installation Guide](INSTALL.md)** — quick start, manual setup, and troubleshooting
 
-A modern MCP server that provides comprehensive file comparison, multimedia management, and developer workspace tools using Beyond Compare. Features 13 powerful tools for everything from file comparison to repository backup and workspace analysis.
+A modern MCP server that provides comprehensive file comparison, multimedia management, and developer workspace tools using Beyond Compare. Features 18 tools (13 comparison/workspace + status/help/shutdown + 2 agentic) for everything from file comparison to repository backup and workspace analysis.
 
 ## Quick Start
 
@@ -36,7 +36,7 @@ If you don't have `just` installed:
 - ** Intelligent Cleanup**: Automated artifact cleanup with node_modules filtering and space reclamation
 - ** Code Analysis**: Duplicate code detection and workspace snapshot comparison
 - ** Security First**: Comprehensive input validation and secure subprocess execution  
-- ** MCP Compliant**: Built on the Model Context Protocol standards with 13 powerful tools
+- ** MCP Compliant**: Built on the Model Context Protocol standards with 18 tools (FastMCP 3.4, stdio + HTTP)
 - ** MCPB Packaging**: Easy deployment with MCPB packages for Claude Desktop (60.4 KB)
 - ** Cross-Platform**: Works on Windows, macOS, and Linux
 
@@ -45,7 +45,7 @@ If you don't have `just` installed:
  **Production Ready** - Comprehensive security audit passed  
  **Input Validation** - Command injection and path traversal protection  
  **Secure Dependencies** - Official MCP SDK 2.11+ with verified packages  
- **Test Coverage** - 85%+ test coverage with security tests  
+ **Test Coverage** - 20% measured coverage (2026-10-13; 29 passed, 26 platform-gated skips), enforced floor in CI
  **Modern Architecture** - Python 3.10+ with type hints and async support
 
 ##  Installation
@@ -111,7 +111,7 @@ COMMAND_TIMEOUT=30
 
 ##  Available Tools
 
-The MCP server provides **13 powerful tools** for file comparison, multimedia management, and developer workflows:
+The MCP server provides **18 tools** for file comparison, multimedia management, and developer workflows (13 comparison/workspace + `bc_status`/`bc_help`/`bc_shutdown` + 2 agentic):
 
 ###  **Core Comparison Tools**
 
@@ -221,6 +221,14 @@ Selectively restore specific projects or files from backup
 - Structure preservation options
 - Conflict resolution and overwrite controls
 
+### 🖥️ **Local & Agentic Tools**
+
+#### 14. `bc_status` · 15. `bc_help` · 16. `bc_shutdown`
+Server health (Prefab card), tool catalog/help, and orderly self-termination.
+
+#### 17. `beyondcompare_agentic_workflow` · 18. `beyondcompare_sampling_hint`
+Natural-language multi-step goals via `ctx.sample()` (needs a sampling-capable client).
+
 ##  Development & Testing
 
 ```bash
@@ -307,7 +315,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 - **Beyond Compare Integration**:  Tested with Beyond Compare 5
 - **Security Features**:  All security tests pass (14/14 unit tests)
 - **MCP Protocol**:  Full MCP compliance verified (9/9 MCP tests)
-- **Test Coverage**:  61% realistic coverage (not inflated claims)
+- **Test Coverage**:  20% measured coverage (2026-10-13; skips are Beyond-Compare-absent / platform-gated cases)
 - **Documentation**:  All claims tested and verified
 
 *This project prioritizes working functionality over marketing claims.*
@@ -318,8 +326,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 Fleet ports: **10840** (Vite frontend), **10841** (unified **FastAPI + FastMCP** gateway: REST + MCP on `/mcp`).
 
 1. Start the gateway: `uv run python -m beyondcompare_mcp.server --http --port 10841`
-2. In another shell: `cd web_sota` then `npm run dev`
+2. In another shell: `cd web_sota` then `bun run dev` (bun is the fleet package manager; `bun.lock` committed)
 3. Open `http://127.0.0.1:10840` (Vite proxies `/api` and `/mcp` to the gateway).
 
 Operator reference: [docs/FLEET_GATEWAY.md](docs/FLEET_GATEWAY.md). Health probe for automation: `GET http://127.0.0.1:10841/api/v1/health`.
-

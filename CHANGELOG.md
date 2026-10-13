@@ -1,4 +1,39 @@
 
+## [Unreleased] — 2026-10-13 (assfix)
+
+### Security
+- CORS allowlist + tailnet/LAN regex replaces allow_origins=["*"] (server.py)
+- MCPB manifest: ${PWD} replaced with spec ${__dirname} (NONSPEC fix)
+
+### Added
+- MCP tools bc_status (Prefab card), bc_help, bc_shutdown
+- REST: GET /api/skills, /api/fleet/apps, /api/llm/discover|providers|models|onboarding,
+  POST /api/llm/chat|chat/stream (backend Ollama proxy), POST /api/shutdown
+- Rich /api/logs (+/api/v1/logs): query filters, total, export (json/csv), DELETE clear
+- Webapp pages: Inbox, Skills, Help (+ sidebar, routes); dashboard onboarding cue + CTA
+- Tool annotations (real MCP hint keys) + output_schema on all 18 tools
+- docs/: CONFIGURATION, DEVELOPMENT, TOOLS, TROUBLESHOOTING, ONBOARDING
+- Session context: .claude-plugin hooks, .cursorrules/.windsurfrules section,
+  copilot-instructions, .opencode + .agents skills, skills/beyondcompare/SKILL.md
+- .env.example, .pre-commit-config.yaml, .gitattributes, scripts/pre-commit-biome.ps1
+- Fleet start.ps1 (engine) replacing bespoke launcher
+- just serve / fmt-check / ci recipes
+
+### Fixed
+- BUG-038 class: combined lifespan now enters mcp_http.lifespan (was router.lifespan_context)
+- Chat/Settings called missing routes (/api/llm/chat/stream, /api/skills, /api/llm/providers) — backend now serves them
+- Logs page called /api/logs — backend now serves it (was /api/v1/logs only)
+- diagnostics tools.total hardcoded 0 — now live count
+- Removed 14 tracked .bak files; *.bak* now gitignored + mcpbignored
+- S110/S112 footgun: ruff ignore entries removed, 20 silent swallows now log
+- T20 print ban enforced (per-file ignores for cli/tests/scripts)
+- Compare/Sync pages: fake sessions/tasks replaced with honest launcher content
+- Chat no longer fetches Ollama directly from the browser
+
+### Changed
+- glama.json: 18 tools, FastMCP 3.4, stdio+http transports
+- llms-full.txt regenerated (was Notepad++ copy-paste)
+
 ## [Unreleased] — 2026-06-14
 
 ### Added
@@ -99,4 +134,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Basic file and folder comparison functionality
 - Folder synchronization capabilities
 - DXT packaging support
-

@@ -30,7 +30,7 @@
       "command": "python",
       "args": ["-m", "beyondcompare_mcp"],
       "env": {
-        "PYTHONPATH": "${PWD}",
+        "PYTHONPATH": "${__dirname}",
         "BEYOND_COMPARE_PATH": "${user_config.beyond_compare_path}",
         "BC_SCRIPTS_DIR": "${user_config.scripts_directory}",
         "LOG_LEVEL": "${user_config.log_level}",
@@ -51,7 +51,7 @@
       "title": "Scripts Directory",
       "description": "Directory for temporary Beyond Compare script files",
       "required": false,
-      "default": "${PWD}/bc_scripts"
+      "default": "${__dirname}/bc_scripts"
     },
     "log_level": {
       "type": "string",
@@ -67,7 +67,7 @@
       "description": "Compare two files using Beyond Compare and get detailed comparison results"
     },
     {
-      "name": "compare_folders", 
+      "name": "compare_folders",
       "description": "Compare two folders using Beyond Compare with optional subfolder inclusion"
     },
     {
