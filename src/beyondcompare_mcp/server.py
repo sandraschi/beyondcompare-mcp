@@ -135,6 +135,7 @@ from typing import Any
 
 from fastapi import Body, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse, StreamingResponse
 from fastmcp import FastMCP
 from fastmcp.server import create_proxy
 
@@ -154,6 +155,18 @@ from .tools.developer import (
 )
 
 logger = logging.getLogger(__name__)
+
+# ── MCP tool annotations (fleet TOOL_DESIGN_STANDARDS §9: real MCP hint keys) ──
+_READONLY = {"readOnlyHint": True, "openWorldHint": True}
+_LOCAL_READONLY = {"readOnlyHint": True, "openWorldHint": False}
+_MUTATING = {"readOnlyHint": False, "destructiveHint": False, "openWorldHint": True}
+_DESTRUCTIVE = {"readOnlyHint": False, "destructiveHint": True, "openWorldHint": True}
+
+
+def _error_response(message: str, error: Exception | str | None = None, **extra: Any) -> dict[str, Any]:
+    """Build a dialogic error payload and log the traceback (TOOL_DESIGN_STANDARDS §7.1 Pattern 3)."""
+    logger.exception(message)
+    return {"success": False, "message": message, "error": str(error) if error else message, **extra}
 
 
 class BeyondCompareMCP:
@@ -197,8 +210,8 @@ class BeyondCompareMCP:
                     try:
                         self.mcp.add_provider(create_proxy(url))
                         _bridge_proxies.append(url)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning(f"Skipping unreachable MCP bridge {url}: {e}")
 
         # Register MCP tools
         self._register_tools()
@@ -249,7 +262,7 @@ class BeyondCompareMCP:
     def _register_tools(self) -> None:
         """Register MCP tools with FastMCP."""
 
-        @self.mcp.tool()
+        @self.mcp.tool(annotations=_READONLY, output_schema={"type": "object"})
         def compare_files(
             left_path: str,
             right_path: str,
@@ -287,7 +300,7 @@ class BeyondCompareMCP:
                     - Parent directory will be created if it doesn't exist
                     - Example: 'C:/reports/comparison.txt'
 
-            Returns:
+            ## Return Format
                 Dictionary containing:
                     - success: Boolean indicating if comparison completed successfully
                     - left_path: Resolved absolute path to left file
@@ -318,7 +331,7 @@ class BeyondCompareMCP:
                 - Check success field before using results
                 - Use compare_folders for directory-level comparisons
 
-            Examples:
+            ## Examples
                 Basic file comparison:
                     result = compare_files(
                         left_path='C:/source/config.txt',
@@ -369,7 +382,7 @@ class BeyondCompareMCP:
             """
             return self._compare_files(left_path, right_path, output_report)
 
-        @self.mcp.tool()
+        @self.mcp.tool(annotations=_READONLY, output_schema={"type": "object"})
         def compare_folders(
             left_path: str,
             right_path: str,
@@ -417,7 +430,7 @@ class BeyondCompareMCP:
                     - False: Only compares files in the top-level directory
                     - Set to False for faster comparison of shallow directory structures
 
-            Returns:
+            ## Return Format
                 Dictionary containing:
                     - success: Boolean indicating if comparison completed successfully
                     - left_path: Resolved absolute path to left folder
@@ -450,7 +463,7 @@ class BeyondCompareMCP:
                 - Review report before performing synchronization
                 - Use compare_files for single file comparisons
 
-            Examples:
+            ## Examples
                 Basic folder comparison:
                     result = compare_folders(
                         left_path='C:/source/project',
@@ -514,7 +527,7 @@ class BeyondCompareMCP:
             """
             return self._compare_folders(left_path, right_path, output_report, include_subfolders)
 
-        @self.mcp.tool()
+        @self.mcp.tool(annotations=_DESTRUCTIVE, output_schema={"type": "object"})
         def sync_folders(
             source_path: str,
             target_path: str,
@@ -566,7 +579,7 @@ class BeyondCompareMCP:
                     - ALWAYS use True first to review changes before executing
                     - Example: Set to False only after reviewing dry_run results
 
-            Returns:
+            ## Return Format
                 Dictionary containing:
                     - success: Boolean indicating if synchronization completed successfully
                     - source_path: Resolved absolute path to source folder
@@ -601,7 +614,7 @@ class BeyondCompareMCP:
                 - Verify source_path is correct before synchronizing
                 - Keep backups of important data before synchronizing
 
-            Examples:
+            ## Examples
                 Preview synchronization (dry run):
                     result = sync_folders(
                         source_path='C:/source/project',
@@ -668,7 +681,7 @@ class BeyondCompareMCP:
 
         # Multimedia Drive Scanner Tools
 
-        @self.mcp.tool()
+        @self.mcp.tool(annotations=_READONLY, output_schema={"type": "object"})
         def multimedia_drive_scanner(
             drives: list[str] | None = None,
             recent_days: int | None = None,
@@ -710,7 +723,7 @@ class BeyondCompareMCP:
                     - Can specify multiple types: ['video', 'audio']
                     - Example: ['video'] to scan only video files
 
-            Returns:
+            ## Return Format
                 Dictionary containing:
                     - success: Boolean indicating if scan completed successfully
                     - scan_time_seconds: Time taken to complete scan
@@ -745,7 +758,7 @@ class BeyondCompareMCP:
                 - Review summary statistics for collection overview
                 - Use cached results with find_multimedia_duplicates
 
-            Examples:
+            ## Examples
                 Scan all available drives:
                     result = multimedia_drive_scanner()
                     # Returns: {
@@ -793,7 +806,7 @@ class BeyondCompareMCP:
                 drives=drives, recent_days=recent_days, file_types=file_types
             )
 
-        @self.mcp.tool()
+        @self.mcp.tool(annotations=_READONLY, output_schema={"type": "object"})
         def find_multimedia_duplicates(
             drives: list[str] | None = None,
             min_size_mb: float = 0.1,
@@ -844,7 +857,7 @@ class BeyondCompareMCP:
                     - Hash calculation can be slow for large files
                     - Example: Set to False for initial quick scan, True for final check
 
-            Returns:
+            ## Return Format
                 Dictionary containing:
                     - success: Boolean indicating if duplicate detection completed successfully
                     - scan_time_seconds: Time taken to complete duplicate detection
@@ -881,7 +894,7 @@ class BeyondCompareMCP:
                 - Review recommendations before deleting files
                 - Start with largest duplicates for maximum space savings
 
-            Examples:
+            ## Examples
                 Find duplicates using cached scan results:
                     result = find_multimedia_duplicates()
                     # Returns: {
@@ -933,7 +946,7 @@ class BeyondCompareMCP:
                 use_content_hash=use_content_hash,
             )
 
-        @self.mcp.tool()
+        @self.mcp.tool(annotations=_READONLY, output_schema={"type": "object"})
         def detect_usb_drives() -> dict[str, Any]:
             """Detect connected USB drives for sync operations.
 
@@ -952,7 +965,7 @@ class BeyondCompareMCP:
             Parameters:
                 None: This tool takes no parameters
 
-            Returns:
+            ## Return Format
                 Dictionary containing:
                     - success: Boolean indicating if detection completed successfully
                     - usb_drives: List of USB drive information dictionaries
@@ -988,7 +1001,7 @@ class BeyondCompareMCP:
                 - Check free_gb to ensure sufficient space
                 - Use with sync_folders for backup operations
 
-            Examples:
+            ## Examples
                 Detect all USB drives:
                     result = detect_usb_drives()
                     # Returns: {
@@ -1041,7 +1054,7 @@ class BeyondCompareMCP:
                     "message": f"Found {len(usb_drives)} USB drive(s)",
                 }
             except Exception as e:
-                logger.error(f"USB drive detection failed: {e}", exc_info=True)
+                logger.exception(f"USB drive detection failed: {e}")
                 return {
                     "success": False,
                     "error": str(e),
@@ -1049,7 +1062,7 @@ class BeyondCompareMCP:
                 }
 
         # Developer Backup and Repository Management Tools
-        @self.mcp.tool()
+        @self.mcp.tool(annotations=_MUTATING, output_schema={"type": "object"})
         def backup_dev_repositories(
             source_path: str,
             backup_path: str,
@@ -1059,7 +1072,26 @@ class BeyondCompareMCP:
             incremental: bool = True,
             dry_run: bool = False,
         ) -> dict[str, Any]:
-            """Smart backup of development repositories with intelligent filtering."""
+            """Smart backup of development repositories with intelligent filtering.
+
+            Copies repo checkouts to a backup location while excluding
+            regenerable artifacts (node_modules, __pycache__, dist, .next).
+            Optionally preserves git essentials, compresses output, and runs
+            incrementally. Preview with dry_run=True before writing.
+
+            ## Return Format
+            Dictionary with success, source_path, backup_path, dry_run,
+            changes_detected, message, and error (only when success is False).
+
+            ## Examples
+            Preview a backup:
+                backup_dev_repositories(source_path='D:/Dev/repos',
+                    backup_path='E:/backups/repos', dry_run=True)
+            Execute an incremental compressed backup:
+                backup_dev_repositories(source_path='D:/Dev/repos',
+                    backup_path='E:/backups/repos', compress=True,
+                    incremental=True, dry_run=False)
+            """
             return self.dev_backup.backup_repositories(
                 source_path,
                 backup_path,
@@ -1070,7 +1102,7 @@ class BeyondCompareMCP:
                 dry_run,
             )
 
-        @self.mcp.tool()
+        @self.mcp.tool(annotations=_MUTATING, output_schema={"type": "object"})
         def analyze_dev_workspace(
             workspace_path: str,
             report_path: str | None = None,
@@ -1078,7 +1110,25 @@ class BeyondCompareMCP:
             include_dependencies: bool = True,
             include_size_analysis: bool = True,
         ) -> dict[str, Any]:
-            """Analyze development workspace for insights and optimization opportunities."""
+            """Analyze development workspace for insights and optimization opportunities.
+
+            Reports language mix, dependency manifests, git statistics, and
+            disk usage per checkout. Optionally writes an HTML report.
+
+            ## Return Format
+            Dictionary with success, workspace_path, language_stats,
+            dependencies, git_stats, size_analysis, report_path, message,
+            and error (only when success is False).
+
+            ## Examples
+            Full analysis with HTML report:
+                analyze_dev_workspace(workspace_path='D:/Dev/repos',
+                    report_path='C:/reports/workspace.html')
+            Quick analysis without extras:
+                analyze_dev_workspace(workspace_path='D:/Dev/repos',
+                    include_git_stats=False, include_dependencies=False,
+                    include_size_analysis=False)
+            """
             return self.workspace_analyzer.analyze_workspace(
                 workspace_path,
                 report_path,
@@ -1087,27 +1137,60 @@ class BeyondCompareMCP:
                 include_size_analysis,
             )
 
-        @self.mcp.tool()
+        @self.mcp.tool(annotations=_MUTATING, output_schema={"type": "object"})
         def scan_repo_health(
             repos_path: str,
             checks: list[str] | None = None,
             report_path: str | None = None,
             fix_issues: bool = False,
         ) -> dict[str, Any]:
-            """Scan repository health and identify potential issues."""
+            """Scan repository health and identify potential issues.
+
+            Checks git status, large files, and outdated dependencies across
+            every checkout under repos_path. With fix_issues=True applies
+            safe automatic fixes; otherwise reports only.
+
+            ## Return Format
+            Dictionary with success, repos_path, issues (per-repo list),
+            fixed (applied fixes), report_path, message, and error
+            (only when success is False).
+
+            ## Examples
+            Report-only scan:
+                scan_repo_health(repos_path='D:/Dev/repos')
+            Scan with automatic fixes:
+                scan_repo_health(repos_path='D:/Dev/repos', fix_issues=True)
+            """
             return self.health_checker.scan_repository_health(repos_path, checks, report_path, fix_issues)
 
-        @self.mcp.tool()
+        @self.mcp.tool(annotations=_DESTRUCTIVE, output_schema={"type": "object"})
         def cleanup_dev_artifacts(
             repos_path: str,
             targets: list[str] | None = None,
             size_threshold_mb: float = 100,
             dry_run: bool = True,
         ) -> dict[str, Any]:
-            """Clean up build artifacts and temporary files across repositories."""
+            """Clean up build artifacts and temporary files across repositories.
+
+            Removes regenerable targets (node_modules, __pycache__, .next,
+            dist) above size_threshold_mb. ALWAYS preview with dry_run=True
+            first — dry_run=False deletes files irreversibly.
+
+            ## Return Format
+            Dictionary with success, repos_path, dry_run, removed
+            (reclaimed bytes/paths), message, and error (only when
+            success is False).
+
+            ## Examples
+            Preview reclaimable space:
+                cleanup_dev_artifacts(repos_path='D:/Dev/repos', dry_run=True)
+            Execute cleanup of large targets only:
+                cleanup_dev_artifacts(repos_path='D:/Dev/repos',
+                    size_threshold_mb=500, dry_run=False)
+            """
             return self.health_checker.cleanup_development_artifacts(repos_path, targets, size_threshold_mb, dry_run)
 
-        @self.mcp.tool()
+        @self.mcp.tool(annotations=_READONLY, output_schema={"type": "object"})
         def find_duplicate_code(
             repos_path: str,
             file_types: list[str] | None = None,
@@ -1115,24 +1198,58 @@ class BeyondCompareMCP:
             similarity_threshold: float = 0.8,
             report_path: str | None = None,
         ) -> dict[str, Any]:
-            """Find duplicate code across repositories."""
+            """Find duplicate code across repositories.
+
+            Detects near-duplicate blocks (>= min_lines) in the given file
+            types above similarity_threshold. Optionally writes a report.
+
+            ## Return Format
+            Dictionary with success, repos_path, duplicate_groups,
+            total_duplicate_files, report_path, message, and error
+            (only when success is False).
+
+            ## Examples
+            Python duplicates at default sensitivity:
+                find_duplicate_code(repos_path='D:/Dev/repos',
+                    file_types=['.py'])
+            Strict TypeScript scan with report:
+                find_duplicate_code(repos_path='D:/Dev/repos',
+                    file_types=['.ts', '.tsx'], min_lines=20,
+                    similarity_threshold=0.9,
+                    report_path='C:/reports/duplicates.txt')
+            """
             return self.duplicate_detector.find_duplicate_code(
                 repos_path, file_types, min_lines, similarity_threshold, report_path
             )
 
-        @self.mcp.tool()
+        @self.mcp.tool(annotations=_READONLY, output_schema={"type": "object"})
         def compare_workspace_snapshots(
             snapshot1_path: str,
             snapshot2_path: str,
             report_path: str | None = None,
             show_changes: list[str] | None = None,
         ) -> dict[str, Any]:
-            """Compare workspace snapshots to identify changes over time."""
+            """Compare workspace snapshots to identify changes over time.
+
+            Diffs two snapshot files (as produced by backup/analysis runs)
+            and reports added, removed, and modified repositories.
+
+            ## Return Format
+            Dictionary with success, snapshot1_path, snapshot2_path,
+            added, removed, modified, report_path, message, and error
+            (only when success is False).
+
+            ## Examples
+            Compare last two snapshots:
+                compare_workspace_snapshots(
+                    snapshot1_path='E:/backups/snap-2026-10-01.json',
+                    snapshot2_path='E:/backups/snap-2026-10-13.json')
+            """
             return self.duplicate_detector.compare_workspace_snapshots(
                 snapshot1_path, snapshot2_path, report_path, show_changes
             )
 
-        @self.mcp.tool()
+        @self.mcp.tool(annotations=_DESTRUCTIVE, output_schema={"type": "object"})
         def selective_restore(
             backup_path: str,
             restore_items: list[str],
@@ -1140,7 +1257,23 @@ class BeyondCompareMCP:
             preserve_structure: bool = True,
             overwrite_existing: bool = False,
         ) -> dict[str, Any]:
-            """Selectively restore specific projects or files from backup."""
+            """Selectively restore specific projects or files from backup.
+
+            Restores restore_items from backup_path into target_path,
+            optionally preserving directory structure. Set
+            overwrite_existing=True only after reviewing the item list.
+
+            ## Return Format
+            Dictionary with success, backup_path, target_path,
+            restored (paths written), message, and error (only when
+            success is False).
+
+            ## Examples
+            Restore one project without overwriting:
+                selective_restore(backup_path='E:/backups/repos',
+                    restore_items=['beyondcompare-mcp'],
+                    target_path='D:/Dev/repos')
+            """
             return self.duplicate_detector.selective_restore(
                 backup_path,
                 restore_items,
@@ -1148,6 +1281,100 @@ class BeyondCompareMCP:
                 preserve_structure,
                 overwrite_existing,
             )
+
+        @self.mcp.tool(annotations=_LOCAL_READONLY, output_schema={"type": "object"}, app=True)
+        async def bc_status() -> dict[str, Any]:
+            """Server status: Beyond Compare detection, tool count, uptime.
+
+            Local-only status probe for dashboards and agents. Reports
+            whether the Beyond Compare executable was found, how many MCP
+            tools are registered, and gateway uptime.
+
+            ## Return Format
+            Dictionary with success, detected (Beyond Compare found),
+            executable, scripts_dir, tool_count, uptime_s, message.
+
+            ## Examples
+            Check the server is healthy:
+                bc_status()
+                # Returns: {'success': True, 'detected': True,
+                #   'tool_count': 18, ...}
+            """
+            tools = len(_ATOMIC_TOOLS) + len(_AGENTIC_TOOLS)
+            exe = Path(self.bc_path)
+            return {
+                "success": True,
+                "detected": exe.exists(),
+                "executable": str(self.bc_path),
+                "scripts_dir": str(self.scripts_dir),
+                "tool_count": tools,
+                "message": "Beyond Compare MCP status",
+            }
+
+        @self.mcp.tool(annotations=_LOCAL_READONLY, output_schema={"type": "object"})
+        def bc_help(topic: str | None = None) -> dict[str, Any]:
+            """Usage help for the Beyond Compare MCP tool surface.
+
+            Returns the tool catalog with one-line guidance each, or
+            detailed guidance for a single topic (tool name).
+
+            ## Return Format
+            Dictionary with success, topic, tools (name -> guidance),
+            message.
+
+            ## Examples
+            Full catalog:
+                bc_help()
+            One tool:
+                bc_help(topic='sync_folders')
+            """
+            catalog = {
+                "compare_files": "Diff two files; optional output_report. Read-only.",
+                "compare_folders": "Diff two trees; include_subfolders=false for shallow. Read-only.",
+                "sync_folders": "Mirror/update/backup sync. ALWAYS dry_run=True first. Destructive.",
+                "multimedia_drive_scanner": "Inventory media drives E:/F:/K:/L:. Read-only.",
+                "find_multimedia_duplicates": "Hash-based duplicate finder over scan cache. Read-only.",
+                "detect_usb_drives": "List removable drives for sync targets. Read-only.",
+                "backup_dev_repositories": "Filtered repo backup with compress/incremental. Mutating.",
+                "analyze_dev_workspace": "Language/deps/git/size analysis + HTML report. Mutating.",
+                "scan_repo_health": "Git/large-file/dep checks; fix_issues=True auto-fixes. Mutating.",
+                "cleanup_dev_artifacts": "Delete regenerable artifacts. Preview first. Destructive.",
+                "find_duplicate_code": "Cross-repo near-duplicate detector. Read-only.",
+                "compare_workspace_snapshots": "Diff two snapshots over time. Read-only.",
+                "selective_restore": "Restore items from backup. Destructive.",
+                "beyondcompare_agentic_workflow": "Natural-language goal via ctx.sample. Agentic.",
+                "beyondcompare_sampling_hint": "Query/category hints for sampling hosts. Agentic.",
+                "bc_status": "This server's health. Local read-only.",
+                "bc_help": "This catalog. Local read-only.",
+                "bc_shutdown": "Orderly server shutdown. Destructive.",
+            }
+            if topic:
+                return {
+                    "success": topic in catalog,
+                    "topic": topic,
+                    "tools": {topic: catalog[topic]} if topic in catalog else {},
+                    "message": catalog.get(topic, f"Unknown topic: {topic}"),
+                }
+            return {"success": True, "topic": None, "tools": catalog, "message": "Beyond Compare MCP tool catalog"}
+
+        @self.mcp.tool(annotations=_DESTRUCTIVE, output_schema={"type": "object"})
+        def bc_shutdown() -> dict[str, Any]:
+            """Shut the MCP server down gracefully (orderly self-termination).
+
+            Responds immediately, then exits the process ~500 ms later so
+            in-flight responses and depot writes can flush.
+
+            ## Return Format
+            Dictionary with success True and a shutdown message.
+
+            ## Examples
+            Restart before upgrades:
+                bc_shutdown()
+            """
+            import threading as _threading
+
+            _threading.Timer(0.5, lambda: os._exit(0)).start()
+            return {"success": True, "message": "beyondcompare-mcp shutting down in ~500 ms"}
 
     def _run_bc_command(
         self,
@@ -1362,7 +1589,7 @@ class BeyondCompareMCP:
             }
 
         except Exception as e:
-            logger.error(f"File comparison failed: {e}", exc_info=True)
+            logger.exception(f"File comparison failed: {e}")
             return {
                 "success": False,
                 "error": str(e),
@@ -1472,8 +1699,8 @@ class BeyondCompareMCP:
                 if _temp_report:
                     try:
                         Path(_temp_report).unlink(missing_ok=True)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning(f"Failed to clean up temp report {_temp_report}: {e}")
 
             if counts is None:
                 counts = {"left_orphans": 0, "right_orphans": 0, "different": 0}
@@ -1491,7 +1718,7 @@ class BeyondCompareMCP:
             }
 
         except Exception as e:
-            logger.error(f"Folder comparison failed: {e}", exc_info=True)
+            logger.exception(f"Folder comparison failed: {e}")
             return {
                 "success": False,
                 "error": str(e),
@@ -1626,6 +1853,30 @@ _fastapi_app: FastAPI | None = None
 _fleet_mcp: FastMCP | None = None
 _fleet_core: BeyondCompareMCP | None = None
 
+# Static tool manifest (single source for /api/capabilities + /api/v1/diagnostics).
+# FastMCP 3.4.5 exposes no public sync/async get_tools() on the server object
+# (only private _list_tools), so the count comes from this list instead of
+# a version-fragile private call. Keep in sync with _register_tools().
+_ATOMIC_TOOLS = [
+    "compare_files",
+    "compare_folders",
+    "sync_folders",
+    "multimedia_drive_scanner",
+    "find_multimedia_duplicates",
+    "detect_usb_drives",
+    "backup_dev_repositories",
+    "analyze_dev_workspace",
+    "scan_repo_health",
+    "cleanup_dev_artifacts",
+    "find_duplicate_code",
+    "compare_workspace_snapshots",
+    "selective_restore",
+    "bc_status",
+    "bc_help",
+    "bc_shutdown",
+]
+_AGENTIC_TOOLS = ["beyondcompare_agentic_workflow", "beyondcompare_sampling_hint"]
+
 
 @asynccontextmanager
 async def _fleet_lifespan(fastapi_app: FastAPI):
@@ -1638,7 +1889,7 @@ async def _fleet_lifespan(fastapi_app: FastAPI):
 
 def _mount_gateway_routes(app: FastAPI, core: BeyondCompareMCP) -> None:
     from ._version import __version__
-    from .log_ring import append_log, get_logs
+    from .log_ring import append_log
 
     @app.middleware("http")
     async def _request_ring(request: Request, call_next):
@@ -1685,6 +1936,12 @@ def _mount_gateway_routes(app: FastAPI, core: BeyondCompareMCP) -> None:
             disk = psutil.disk_usage("/").percent
         except ImportError:
             cpu = mem = disk = None
+        try:
+            tool_names = list(_ATOMIC_TOOLS) + list(_AGENTIC_TOOLS)
+            tool_total = len(tool_names)
+        except Exception:
+            tool_total = 0
+            tool_names = []
         return {
             "success": True,
             "backend": {
@@ -1693,7 +1950,7 @@ def _mount_gateway_routes(app: FastAPI, core: BeyondCompareMCP) -> None:
                 "uptime": int(time.time() - _gateway_start),
             },
             "system": {"cpu_percent": cpu, "memory_percent": mem, "disk_percent": disk},
-            "tools": {"total": 0},
+            "tools": {"total": tool_total, "names": tool_names},
             "cua_status": {"tesseract_available": False, "window_found": False},
         }
 
@@ -1703,22 +1960,8 @@ def _mount_gateway_routes(app: FastAPI, core: BeyondCompareMCP) -> None:
             "status": "ok",
             "server": {"name": "beyondcompare-mcp", "version": __version__, "fastmcp": "3.x"},
             "tool_surface": {
-                "atomic": [
-                    "compare_files",
-                    "compare_folders",
-                    "sync_folders",
-                    "multimedia_drive_scanner",
-                    "find_multimedia_duplicates",
-                    "detect_usb_drives",
-                    "backup_dev_repositories",
-                    "analyze_dev_workspace",
-                    "scan_repo_health",
-                    "cleanup_dev_artifacts",
-                    "find_duplicate_code",
-                    "compare_workspace_snapshots",
-                    "selective_restore",
-                ],
-                "agentic": ["beyondcompare_agentic_workflow", "beyondcompare_sampling_hint"],
+                "atomic": list(_ATOMIC_TOOLS),
+                "agentic": list(_AGENTIC_TOOLS),
             },
             "endpoints": {
                 "health": "/api/v1/health",
@@ -1729,9 +1972,174 @@ def _mount_gateway_routes(app: FastAPI, core: BeyondCompareMCP) -> None:
             },
         }
 
+    def _norm_log(entry: dict[str, Any], idx: int) -> dict[str, Any]:
+        import datetime as _dt
+
+        ts = float(entry.get("ts", 0) or 0)
+        stamp = _dt.datetime.fromtimestamp(ts).isoformat() if ts else ""
+        status = entry.get("status")
+        if entry.get("event") == "http":
+            detail = f"{entry.get('method', '?')} {entry.get('path', '?')} -> {status} ({entry.get('ms', '?')}ms)"
+        else:
+            detail = str(entry.get("event", "?"))
+            if entry.get("server"):
+                detail += f" ({entry.get('server')})"
+        level = str(entry.get("level", "")).upper() or (
+            "ERROR" if isinstance(status, int) and status >= 500 else "INFO"
+        )
+        meta = {k: v for k, v in entry.items() if k not in ("ts", "event", "level")}
+        return {
+            "id": f"{int(ts * 1000) if ts else 0}-{idx}",
+            "timestamp": stamp,
+            "level": level,
+            "kind": str(entry.get("event", "")),
+            "detail": detail,
+            "meta": meta,
+        }
+
+    def _query_logs(
+        limit: int = 200,
+        offset: int = 0,
+        sort: str = "desc",
+        level: str = "",
+        kind: str = "",
+        search: str = "",
+        after_id: str = "",
+    ) -> dict[str, Any]:
+        from .log_ring import get_logs as _get_all
+
+        rows = [_norm_log(e, i) for i, e in enumerate(_get_all(500))]
+        if level:
+            rows = [r for r in rows if r["level"] == level.upper()]
+        if kind:
+            rows = [r for r in rows if r["kind"] == kind]
+        if search:
+            q = search.lower()
+            rows = [r for r in rows if q in r["detail"].lower() or q in _json_dumps(r["meta"]).lower()]
+        rows = sorted(rows, key=lambda r: r["id"], reverse=(sort != "asc"))
+        if after_id:
+            ids = [r["id"] for r in rows]
+            if after_id in ids:
+                rows = rows[ids.index(after_id) + 1 :]
+        total = len(rows)
+        return {"entries": rows[offset : offset + max(limit, 1)], "total": total}
+
+    def _json_dumps(obj: Any) -> str:
+        import json as _json
+
+        try:
+            return _json.dumps(obj, default=str)
+        except Exception:
+            return str(obj)
+
+    @app.get("/api/fleet/apps")
+    async def api_fleet_apps() -> dict[str, Any]:
+        """Fleet app registry for the Apps Hub (mirrors WEBAPP_PORTS.md 10840/10841 entries)."""
+        return {
+            "apps": [
+                {
+                    "id": "fleet-dashboard",
+                    "label": "Fleet Dashboard",
+                    "description": "Central management for all MCP servers",
+                    "url": "http://localhost:10794",
+                    "port": 10794,
+                    "tags": ["infra", "admin"],
+                },
+                {
+                    "id": "advanced-memory",
+                    "label": "Advanced Memory",
+                    "description": "Semantic knowledge graph and long-term memory",
+                    "url": "http://localhost:10704",
+                    "port": 10704,
+                    "tags": ["ai", "memory"],
+                },
+                {
+                    "id": "robotics",
+                    "label": "Robotics Control",
+                    "description": "Physical and virtual robot orchestration",
+                    "url": "http://localhost:10706",
+                    "port": 10706,
+                    "tags": ["hardware", "simulation"],
+                },
+                {
+                    "id": "osc-mcp",
+                    "label": "OSC Orchestrator",
+                    "description": "Real-time media and robotics transport",
+                    "url": "http://localhost:10766",
+                    "port": 10766,
+                    "tags": ["media", "transport"],
+                },
+                {
+                    "id": "obs-mcp",
+                    "label": "OBS Dashboard",
+                    "description": "Live streaming and recording control",
+                    "url": "http://localhost:10818",
+                    "port": 10818,
+                    "tags": ["media", "streaming"],
+                },
+                {
+                    "id": "ocr-interface",
+                    "label": "OCR Interface",
+                    "description": "Document scanning and text extraction",
+                    "url": "http://localhost:10858",
+                    "port": 10858,
+                    "tags": ["utilities", "ai"],
+                },
+                {
+                    "id": "winrar",
+                    "label": "Archive Manager",
+                    "description": "File compression and extraction utilities",
+                    "url": "http://localhost:10763",
+                    "port": 10763,
+                    "tags": ["utility", "files"],
+                },
+                {
+                    "id": "beyondcompare-mcp",
+                    "label": "Beyond Compare MCP",
+                    "description": "Diff, sync, multimedia scan, and repo health via MCP + REST gateway",
+                    "url": "http://localhost:10840",
+                    "port": 10840,
+                    "tags": ["mcp", "files", "fleet"],
+                },
+            ],
+            "source": "static-registry",
+        }
+
+    @app.get("/api/logs")
     @app.get("/api/v1/logs")
-    async def api_logs(limit: int = 200):
-        return {"entries": get_logs(min(limit, 500))}
+    async def api_logs(
+        limit: int = 200,
+        offset: int = 0,
+        sort: str = "desc",
+        level: str = "",
+        kind: str = "",
+        search: str = "",
+        after_id: str = "",
+    ) -> dict[str, Any]:
+        return _query_logs(
+            limit=min(limit, 500), offset=offset, sort=sort, level=level, kind=kind, search=search, after_id=after_id
+        )
+
+    @app.get("/api/logs/export")
+    async def api_logs_export(format: str = "json", level: str = "", kind: str = "", search: str = "") -> Any:
+        data = _query_logs(limit=500, level=level, kind=kind, search=search)
+        if format == "csv":
+            import csv as _csv
+            import io as _io
+
+            buf = _io.StringIO()
+            w = _csv.writer(buf)
+            w.writerow(["id", "timestamp", "level", "kind", "detail"])
+            for e in data["entries"]:
+                w.writerow([e["id"], e["timestamp"], e["level"], e["kind"], e["detail"]])
+            return PlainTextResponse(buf.getvalue(), media_type="text/csv")
+        return {"entries": data["entries"], "total": data["total"]}
+
+    @app.delete("/api/logs")
+    async def api_logs_clear() -> dict[str, Any]:
+        from .log_ring import clear_logs
+
+        return {"ok": True, "dropped": clear_logs()}
 
     ollama_base = os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
     llm_store: dict[str, str] = {"provider": "ollama", "model": ""}
@@ -1763,6 +2171,177 @@ def _mount_gateway_routes(app: FastAPI, core: BeyondCompareMCP) -> None:
             return {"ok": False, "models": [], "error": str(e), "base_url": ollama_base}
         return {"ok": False, "models": [], "base_url": ollama_base}
 
+    @app.get("/api/skills")
+    async def api_skills() -> dict[str, Any]:
+        """Skill listing for the Chat page (skill-first prompt construction)."""
+        from .skills import SKILL_MARKDOWN
+
+        return {
+            "skills": [
+                {
+                    "name": "beyondcompare-mcp",
+                    "uri": "skill://beyondcompare-mcp/SKILL.md",
+                    "description": "Beyond Compare file/folder comparison, sync, and dev-workspace tools.",
+                    "content": SKILL_MARKDOWN,
+                }
+            ]
+        }
+
+    async def _probe_models(base_url: str) -> list[str]:
+        import httpx
+
+        try:
+            async with httpx.AsyncClient(timeout=4.0) as client:
+                r = await client.get(f"{base_url.rstrip('/')}/api/tags")
+                if r.status_code == 200:
+                    return [m.get("name", "") for m in r.json().get("models", []) if m.get("name")]
+        except Exception as e:
+            logger.debug(f"LLM probe failed for {base_url}: {e}")
+        return []
+
+    @app.get("/api/llm/discover")
+    async def llm_discover() -> dict[str, Any]:
+        """LLM provider auto-discovery (Ollama :11434, LM Studio :1234)."""
+        ollama_models = await _probe_models(ollama_base)
+        lm_models = await _probe_models("http://127.0.0.1:1234")
+        return {
+            "ollama": {"detected": bool(ollama_models), "base_url": ollama_base, "models": ollama_models},
+            "lm_studio": {"detected": bool(lm_models), "base_url": "http://127.0.0.1:1234", "models": lm_models},
+        }
+
+    @app.get("/api/llm/providers")
+    async def llm_providers() -> dict[str, Any]:
+        """Provider registry shaped for the Settings page (never key bytes — local only)."""
+        ollama_models = await _probe_models(ollama_base)
+        lm_models = await _probe_models("http://127.0.0.1:1234")
+        return {
+            "ollama": [{"name": m} for m in ollama_models],
+            "lm_studio": [{"name": m} for m in lm_models],
+        }
+
+    @app.get("/api/llm/models")
+    async def llm_models_standard(provider: str = "ollama") -> dict[str, Any]:
+        """Model list per provider (standard path; live when reachable)."""
+        base = ollama_base if provider == "ollama" else "http://127.0.0.1:1234"
+        models = await _probe_models(base)
+        return {"ok": bool(models), "provider": provider, "models": models, "base_url": base}
+
+    async def _resolve_chat_model(data: dict[str, Any]) -> str:
+        model = str(data.get("model") or llm_store.get("model") or "").strip()
+        if not model:
+            models = await _probe_models(ollama_base)
+            model = models[0] if models else ""
+        return model
+
+    @app.post("/api/llm/chat")
+    async def llm_chat(body: dict[str, Any] | None = Body(default=None)) -> dict[str, Any]:
+        """Backend chat proxy (non-streaming) — the only path Chat uses; keys never leave the server."""
+        import httpx
+
+        data = body if isinstance(body, dict) else {}
+        model = await _resolve_chat_model(data)
+        if not model:
+            return {"error": "No LLM model available. Start Ollama and pull a model, then retry."}
+        messages: list[dict[str, str]] = []
+        system = str(data.get("system") or "").strip()
+        if system:
+            messages.append({"role": "system", "content": system})
+        for m in data.get("messages", []) or []:
+            if isinstance(m, dict) and m.get("content"):
+                messages.append({"role": m.get("role", "user"), "content": str(m["content"])})
+        prompt = str(data.get("prompt") or "").strip()
+        if prompt:
+            messages.append({"role": "user", "content": prompt})
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                r = await client.post(
+                    f"{ollama_base.rstrip('/')}/api/chat",
+                    json={"model": model, "messages": messages, "stream": False},
+                )
+                if r.status_code != 200:
+                    return {"error": f"Ollama HTTP {r.status_code}: {r.text[:300]}"}
+                return {"response": r.json().get("message", {}).get("content", ""), "model": model}
+        except Exception as e:
+            return _error_response("LLM chat proxy failed", e)
+
+    @app.post("/api/llm/chat/stream")
+    async def llm_chat_stream(body: dict[str, Any] | None = Body(default=None)) -> StreamingResponse:
+        """Streaming backend chat proxy (SSE `data: {"c": chunk}` + `data: [DONE]`)."""
+
+        async def _gen():
+            import json as _json
+
+            import httpx
+
+            data = body if isinstance(body, dict) else {}
+            model = await _resolve_chat_model(data)
+            if not model:
+                yield 'data: {"error": "No LLM model available. Start Ollama and pull a model."}\n\n'
+                yield "data: [DONE]\n\n"
+                return
+            messages: list[dict[str, str]] = []
+            system = str(data.get("system") or "").strip()
+            if system:
+                messages.append({"role": "system", "content": system})
+            for m in data.get("messages", []) or []:
+                if isinstance(m, dict) and m.get("content"):
+                    messages.append({"role": m.get("role", "user"), "content": str(m["content"])})
+            prompt = str(data.get("prompt") or "").strip()
+            if prompt:
+                messages.append({"role": "user", "content": prompt})
+            try:
+                async with httpx.AsyncClient(timeout=120.0) as client:
+                    async with client.stream(
+                        "POST",
+                        f"{ollama_base.rstrip('/')}/api/chat",
+                        json={"model": model, "messages": messages, "stream": True},
+                    ) as r:
+                        if r.status_code != 200:
+                            yield f'data: {{"error": "Ollama HTTP {r.status_code}"}}\n\n'
+                        else:
+                            async for line in r.aiter_lines():
+                                line = line.strip()
+                                if not line:
+                                    continue
+                                try:
+                                    payload = _json.loads(line)
+                                except Exception:
+                                    payload = {}  # non-JSON keepalive line — treated as empty chunk
+                                chunk = (
+                                    payload.get("message", {}).get("content", "") if isinstance(payload, dict) else ""
+                                )
+                                if chunk:
+                                    yield f"data: {_json.dumps({'c': chunk})}\n\n"
+            except Exception as e:
+                yield f'data: {{"error": "{str(e)[:200]}"}}\n\n'
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(_gen(), media_type="text/event-stream")
+
+    @app.get("/api/llm/onboarding")
+    async def llm_onboarding() -> dict[str, Any]:
+        """Fresh-install starter facts + recommended path for the under-hero cue."""
+        exe = Path(core.bc_path)
+        disc = await llm_discover()
+        return {
+            "beyond_compare_detected": exe.exists(),
+            "ollama_detected": disc["ollama"]["detected"],
+            "lm_studio_detected": disc["lm_studio"]["detected"],
+            "recommended": (
+                "Pick a provider + model on the Settings page, then try the Chat page."
+                if (disc["ollama"]["detected"] or disc["lm_studio"]["detected"])
+                else "Install Ollama (https://ollama.com) and pull a model, or point BEYOND_COMPARE_PATH at BCompare.exe."
+            ),
+        }
+
+    @app.post("/api/shutdown")
+    async def api_shutdown() -> dict[str, Any]:
+        """Orderly exit: respond 200 immediately, exit ~500 ms later (fleet launcher pre-restart hook)."""
+        import threading as _threading
+
+        _threading.Timer(0.5, lambda: os._exit(0)).start()
+        return {"ok": True, "message": "shutting down"}
+
 
 def ensure_fleet_stack(
     bc_path: str | None = None,
@@ -1773,10 +2352,29 @@ def ensure_fleet_stack(
     if _fleet_initialized and _fastapi_app and _fleet_mcp and _fleet_core:
         return _fastapi_app, _fleet_mcp, _fleet_core
 
+    _backend_port = int(os.environ.get("MCP_PORT", "10841"))
+    _cors_origins = [
+        # Local dev (registered fleet ports 10840 frontend / 10841 backend)
+        "http://localhost:10840",
+        "http://127.0.0.1:10840",
+        "http://localhost:10841",
+        "http://127.0.0.1:10841",
+        # Tauri WebView (always include, harmless when not in Tauri)
+        "tauri://localhost",
+        "http://tauri.localhost",
+        "https://tauri.localhost",
+    ]
+    _cors_regex = (
+        r"https?://(?:[a-zA-Z0-9-]+\.ts\.net|.*?\.tail-[a-f0-9]+\.ts\.net"
+        r"|tauri\.localhost|localhost|127\.0\.0\.1"
+        r"|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}"
+        r"|100\.\d{1,3}\.\d{1,3}\.\d{1,3})(?::\d+)?$|^tauri://localhost$"
+    )
     fastapi_app = FastAPI(title="Beyond Compare MCP", lifespan=_fleet_lifespan)
     fastapi_app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=_cors_origins,
+        allow_origin_regex=_cors_regex,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -1808,7 +2406,7 @@ def ensure_fleet_stack(
         @asynccontextmanager
         async def _combined_lifespan(parent: FastAPI):
             async with _fleet_lifespan(parent):
-                async with mcp_http.router.lifespan_context(parent):
+                async with mcp_http.lifespan(parent):
                     yield
 
         fastapi_app.router.lifespan_context = _combined_lifespan

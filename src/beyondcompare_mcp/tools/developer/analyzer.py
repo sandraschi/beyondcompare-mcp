@@ -501,14 +501,14 @@ class WorkspaceAnalyzer:
                         mtime = file_path.stat().st_mtime
                         if mtime > latest_time:
                             latest_time = mtime
-                    except (OSError, PermissionError):
-                        pass
+                    except (OSError, PermissionError) as e:
+                        logger.debug(f"Skipping unreadable file {file_path}: {e}")
 
             if latest_time > 0:
                 return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(latest_time))
 
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Latest-modification scan failed: {e}")
 
         return None
 

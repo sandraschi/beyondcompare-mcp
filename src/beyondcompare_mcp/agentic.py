@@ -23,9 +23,16 @@ def set_core_getter(fn: Callable[[], Any]) -> None:
 def register_agentic_tools(mcp: FastMCP) -> None:
     """Register sampling workflow + static sampling hint."""
 
-    @mcp.tool()
+    @mcp.tool(annotations={"readOnlyHint": True, "openWorldHint": True})
     def beyondcompare_sampling_hint() -> str:
-        """Explain how to use client-side sampling with this server (SEP-1577)."""
+        """Explain how to use client-side sampling with this server (SEP-1577).
+
+        ## Return Format
+        Plain-text hint string describing the sampling workflow and fallback.
+
+        ## Examples
+        beyondcompare_sampling_hint()
+        """
         return (
             "beyondcompare_agentic_workflow uses FastMCP Context.sample() so the host model can "
             "plan and call sub-tools (bc_status, compare_two_files, compare_two_folders, scan_repos). "
@@ -33,7 +40,7 @@ def register_agentic_tools(mcp: FastMCP) -> None:
             "If sampling is not available, invoke compare_files, compare_folders, and scan_repo_health directly."
         )
 
-    @mcp.tool()
+    @mcp.tool(annotations={"readOnlyHint": False, "destructiveHint": False, "openWorldHint": True})
     async def beyondcompare_agentic_workflow(
         goal: Annotated[
             str,
@@ -46,7 +53,15 @@ def register_agentic_tools(mcp: FastMCP) -> None:
         ],
         ctx: Context,
     ) -> str:
-        """Plan and execute BC-focused steps via sampling (SEP-1577)."""
+        """Plan and execute BC-focused steps via sampling (SEP-1577).
+
+        ## Return Format
+        Plain-text summary of the executed plan and results.
+
+        ## Examples
+        beyondcompare_agentic_workflow(
+            goal='Compare D:/a/file.txt vs D:/b/file.txt and say if identical')
+        """
 
         def core() -> Any:
             if _get_core is None:

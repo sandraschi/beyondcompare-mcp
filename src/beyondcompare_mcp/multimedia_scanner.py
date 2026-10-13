@@ -461,7 +461,8 @@ class MultimediaDriveScanner:
                                         "detection_method": "fallback",
                                     }
                                 )
-                    except Exception:
+                    except Exception as e:
+                        logger.debug(f"USB probe failed for a candidate drive: {e}")
                         continue
 
         return usb_drives
@@ -518,8 +519,8 @@ class MultimediaDriveScanner:
                     # This is a heuristic - not perfect but better than nothing
                     if volume_serial:
                         return f"vol_{volume_serial}"
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"Volume serial probe failed for {drive_letter}: {e}")
 
                 # Alternative: Try to get disk number using WMI (more accurate but requires WMI)
                 try:
@@ -538,12 +539,12 @@ class MultimediaDriveScanner:
                                             return f"disk_{disk_id}"
                 except ImportError:
                     # WMI not available, skip
-                    pass
-                except Exception:
+                    logger.debug(f"WMI not available for {drive_letter}, skipping disk-number probe")
+                except Exception as e:
                     # WMI call failed, skip
-                    pass
-        except Exception:
-            pass
+                    logger.debug(f"WMI disk probe failed for {drive_letter}: {e}")
+        except Exception as e:
+            logger.debug(f"Physical drive id probe failed for {drive_letter}: {e}")
         return None
 
     def _get_drive_label(self, drive: str) -> str:
@@ -554,11 +555,12 @@ class MultimediaDriveScanner:
                     import win32api
 
                     return win32api.GetVolumeInformation(drive + "\\")[0] or "Unlabeled"
-                except (ImportError, Exception):
+                except (ImportError, Exception) as e:
                     # Fallback without win32api or if call fails
+                    logger.debug(f"Volume label probe failed for {drive}: {e}")
                     return "Unknown Label"
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Drive label probe failed for {drive}: {e}")
         return "Unknown"
 
     def _calculate_file_hash(self, file_path: str, chunk_size: int = 8192) -> str:

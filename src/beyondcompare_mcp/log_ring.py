@@ -28,3 +28,11 @@ def get_logs(limit: int = 200) -> list[dict[str, Any]]:
     if limit >= len(snap):
         return snap
     return snap[-limit:]
+
+
+def clear_logs() -> int:
+    """Empty the ring buffer; returns the number of entries dropped."""
+    with _lock:
+        n = len(_entries)
+        _entries.clear()
+    return n

@@ -246,7 +246,7 @@ async def run_server_async(mcp_app, args: argparse.Namespace | None = None, serv
     except asyncio.CancelledError:
         logger.info(f"{server_name} task cancelled")
     except Exception as e:
-        logger.error(f"{server_name} failed: {e}", exc_info=True)
+        logger.exception(f"{server_name} failed: {e}")
         raise
 
 
