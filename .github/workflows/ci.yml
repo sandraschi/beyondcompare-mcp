@@ -18,6 +18,10 @@ jobs:
         run: uv run ruff check src/ tests/ scripts/
       - name: Format check (ruff)
         run: uv run ruff format src/ tests/ scripts/ --check
+      - name: Typecheck (mypy)
+        run: uv run mypy src/
+      - name: Typecheck (pyright)
+        run: uv run pyright src/
       - name: Tests
         run: uv run pytest tests/ -q --ignore=tests/test_integration.py
       - name: Install webapp deps

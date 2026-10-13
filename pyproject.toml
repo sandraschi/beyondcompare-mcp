@@ -64,6 +64,7 @@ dev = [
     "black>=23.9.0",
     "isort>=5.12.0",
     "mypy>=1.6.0",
+    "pyright>=1.1.390",
     "ruff>=0.16.0,<0.17",
 
     # Type stubs would go here if needed

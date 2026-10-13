@@ -7,6 +7,7 @@ automated cleanup of build artifacts and temporary files.
 
 import logging
 import shutil
+import subprocess
 import time
 from pathlib import Path
 from typing import Any
@@ -292,8 +293,6 @@ class RepositoryHealthChecker:
             fix_issues: Whether to attempt fixes
         """
         try:
-            import subprocess
-
             # Check for uncommitted changes
             git_result = subprocess.run(
                 ["git", "status", "--porcelain"], cwd=repo_path, capture_output=True, text=True, timeout=10

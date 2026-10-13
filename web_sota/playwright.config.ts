@@ -17,17 +17,18 @@ export default defineConfig({
   },
   webServer: [
     {
-      // Gateway backend (serves /api/* + /mcp). BC detection may be
-      // false on CI agents — the dashboard handles both states.
-      command: `powershell -NoProfile -Command "${BOOTSTRAP}powershell -NoProfile -ExecutionPolicy Bypass -File ..\\start.ps1 -BackendOnly -NoBrowser"`,
+      // Gateway backend, run blocking so Playwright owns its lifetime.
+      // (start.ps1 detaches and exits, which Playwright reads as failure,
+      // and leaves stale tenants holding the port across runs.)
+      command: `powershell -NoProfile -Command "${BOOTSTRAP}cd ..; uv run python -m beyondcompare_mcp.server --http --port 10841"`,
       port: 10841,
-      reuseExistingServer: true,
+      reuseExistingServer: false,
       timeout: 120_000,
     },
     {
       command: `powershell -NoProfile -Command "${BOOTSTRAP}bun run dev -- --port 10840 --host 127.0.0.1"`,
       port: 10840,
-      reuseExistingServer: true,
+      reuseExistingServer: false,
       timeout: 120_000,
     },
   ],

@@ -1820,7 +1820,9 @@ class BeyondCompareMCP:
     def run(self) -> None:
         """Blocking stdio run (legacy). Prefer ``run_gateway_main`` / transport."""
         if _is_stdio_mode and hasattr(sys, "_original_stdout"):
-            sys.stdout = sys._original_stdout
+            _saved_stdout = sys.__dict__.get("_original_stdout")
+            if _saved_stdout is not None:
+                sys.stdout = _saved_stdout
             if os.name == "nt":
                 try:
                     import msvcrt
@@ -1929,7 +1931,7 @@ def _mount_gateway_routes(app: FastAPI, core: BeyondCompareMCP) -> None:
     @app.get("/api/v1/diagnostics")
     async def api_diagnostics() -> dict[str, Any]:
         try:
-            import psutil
+            import psutil  # pyright: ignore[reportMissingModuleSource] - optional dep, ImportError fallback below
 
             cpu = psutil.cpu_percent()
             mem = psutil.virtual_memory().percent
@@ -2476,7 +2478,9 @@ def run_gateway_main(argv: list[str] | None = None) -> None:
     # BeyondCompareMCP.run() restored it, so on this path every JSON-RPC reply
     # went into the sink and clients never got an initialize response.
     if hasattr(sys, "_original_stdout"):
-        sys.stdout = sys._original_stdout
+        _saved_stdout = sys.__dict__.get("_original_stdout")
+        if _saved_stdout is not None:
+            sys.stdout = _saved_stdout
     run_server(get_fleet_mcp(), args=args, server_name="beyondcompare-mcp")
 
 

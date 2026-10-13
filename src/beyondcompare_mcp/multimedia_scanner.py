@@ -524,7 +524,7 @@ class MultimediaDriveScanner:
 
                 # Alternative: Try to get disk number using WMI (more accurate but requires WMI)
                 try:
-                    import wmi
+                    import wmi  # pyright: ignore[reportMissingImports]
 
                     c = wmi.WMI()
                     for disk in c.Win32_LogicalDisk():

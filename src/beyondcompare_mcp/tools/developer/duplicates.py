@@ -694,6 +694,7 @@ class CodeDuplicateDetector:
         Returns:
             Restore result
         """
+        target_path: Path | None = None
         try:
             # Determine target path
             if preserve_structure:
@@ -739,7 +740,7 @@ class CodeDuplicateDetector:
         except Exception as e:
             return {
                 "source": str(source_path),
-                "target": str(target_path) if "target_path" in locals() else "unknown",
+                "target": str(target_path) if target_path is not None else "unknown",
                 "status": "failed",
                 "error": str(e),
             }
