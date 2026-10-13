@@ -147,6 +147,12 @@ extra_checks = true
 module = "tests.*"
 disallow_untyped_defs = false
 
+# Platform-conditional / stub-less third-party imports (Windows-only or
+# packages without py.typed markers). Import sites handle absence at runtime.
+[[tool.mypy.overrides]]
+module = ["win32api", "win32file", "wmi", "psutil"]
+ignore_missing_imports = true
+
 # Test configuration with pytest
 [tool.pytest.ini_options]
 minversion = "7.0"

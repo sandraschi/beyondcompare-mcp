@@ -7,7 +7,7 @@ default:
 
 # --- Quality ---
 
-# Execute Ruff SOTA v13.1 linting (same scope as CI; HelloWorld30/ demo scratch excluded)
+# Execute Ruff SOTA v13.1 linting (same scope as CI)
 lint:
     Set-Location '{{justfile_directory()}}'; uv run ruff check src/ tests/ scripts/; Set-Location '{{justfile_directory()}}\web_sota'; npx @biomejs/biome ci .
 
@@ -35,9 +35,15 @@ fmt-check:
 
 # --- CI ---
 
-# Local five-gate subset: lint + format check + tests
+# Local gates (same scope as CI): lint + format check + tests
 ci:
-    Set-Location '{{justfile_directory()}}'; uv run ruff check .; uv run ruff format . --check; uv run python -m pytest tests -q --ignore=tests/test_integration.py
+    Set-Location '{{justfile_directory()}}'; uv run ruff check src/ tests/ scripts/; uv run ruff format src/ tests/ scripts/ --check; uv run python -m pytest tests -q --ignore=tests/test_integration.py
+
+# --- Native (Tauri NSIS) ---
+
+# Full NSIS build: tsc + PyInstaller backend + Tauri bundle (needs cargo + NSIS)
+build-native:
+    Set-Location '{{justfile_directory()}}'; powershell.exe -NoProfile -File "{{justfile_directory()}}\native\build.ps1"
 
 # --- Hardening ---
 

@@ -78,10 +78,22 @@ Add to your `claude_desktop_config.json`:
 
 ### Quick Install (Recommended)
 
-**For Claude Desktop users:**
-1. Download or build the latest `.mcpb` package.
-2. Drag the `.mcpb` file to Claude Desktop or use Settings > MCP > Install Extension
-3. Beyond Compare will be auto-detected (or configure path when prompted)
+**For Claude Desktop users (Windows):**
+```powershell
+irm https://github.com/sandraschi/beyondcompare-mcp/releases/latest/download/install.ps1 | iex
+```
+Or download `beyondcompare-mcp.mcpb` from the latest release and drag it into Claude Desktop (Settings > MCP > Install Extension).
+Beyond Compare will be auto-detected (or configure the path when prompted).
+
+**For other clients (Cursor, VS Code, Claude Code):**
+```json
+"mcpServers": {
+  "beyondcompare-mcp": {
+    "command": "uvx",
+    "args": ["--from", "git+https://github.com/sandraschi/beyondcompare-mcp", "beyondcompare-mcp"]
+  }
+}
+```
 
 ### Install from Source
 
