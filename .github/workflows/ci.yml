@@ -29,3 +29,9 @@ jobs:
       - name: Lint webapp (biome)
         working-directory: web_sota
         run: bun run biome:ci
+      - name: Install Playwright browsers
+        working-directory: web_sota
+        run: bunx playwright install chromium
+      - name: E2E smoke (backend + frontend via webServer)
+        working-directory: web_sota
+        run: bun run e2e
