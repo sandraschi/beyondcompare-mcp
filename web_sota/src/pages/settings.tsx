@@ -7,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { API_BASE, fetchHealth } from "@/lib/api";
+import { API_BASE, ENDPOINTS, fetchHealth } from "@/lib/api";
 
 function LLMSettings() {
   const [providers, setProviders] = useState<
@@ -16,7 +16,7 @@ function LLMSettings() {
   const [selectedProvider, setSelectedProvider] = useState("ollama");
   const [selectedModel, setSelectedModel] = useState("");
   useEffect(() => {
-    fetch(`${API_BASE}/api/llm/providers`)
+    fetch(`${API_BASE}${ENDPOINTS.llmProviders}`)
       .then((r) => r.json())
       .then((d) => {
         setProviders(d);

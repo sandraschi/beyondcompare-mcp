@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { API_BASE } from "@/lib/api";
+import { API_BASE, ENDPOINTS } from "@/lib/api";
 import { useZoom } from "@/lib/useZoom";
 import { useConnection } from "@/store/connection";
 import { Sidebar } from "./sidebar";
@@ -21,7 +21,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   const tick = useCallback(async () => {
     try {
-      const r = await fetch(`${API_BASE}/api/v1/health`, {
+      const r = await fetch(`${API_BASE}${ENDPOINTS.health}`, {
         signal: AbortSignal.timeout(5000),
       });
       if (r.ok) {

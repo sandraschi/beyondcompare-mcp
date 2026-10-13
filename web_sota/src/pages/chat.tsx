@@ -1,6 +1,6 @@
 import { Bot, Download, Eraser, Send, User } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { API_BASE } from "@/lib/api";
+import { API_BASE, ENDPOINTS } from "@/lib/api";
 
 const HISTORY_KEY = "beyondcompare-chat-history";
 const PERSONALITY_KEY = "beyondcompare-chat-personality";
@@ -70,8 +70,8 @@ function buildSystemPrompt(
   return `${SKILL_PREPROMPT}\n\n---\n\n## Role\n${role}`;
 }
 
-const CHAT_ENDPOINT = "/api/llm/chat/stream";
-const SKILLS_ENDPOINT = "/api/skills";
+const CHAT_ENDPOINT = ENDPOINTS.llmChatStream;
+const SKILLS_ENDPOINT = ENDPOINTS.skills;
 
 export function Chat() {
   const [chat, setChat] = useState<Message[]>(() => loadHistory());
@@ -108,7 +108,7 @@ export function Chat() {
     (async () => {
       try {
         // Backend proxy only — browsers must never call Ollama directly.
-        const r = await fetch(`${API_BASE}/api/llm/discover`, {
+        const r = await fetch(`${API_BASE}${ENDPOINTS.llmDiscover}`, {
           signal: AbortSignal.timeout(5000),
         });
         if (!r.ok) {

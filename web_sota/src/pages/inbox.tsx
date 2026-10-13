@@ -1,6 +1,6 @@
 import { CheckCheck, Inbox as InboxIcon, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { API_BASE } from "@/lib/api";
+import { API_BASE, ENDPOINTS } from "@/lib/api";
 
 type InboxItem = {
   id: string;
@@ -34,7 +34,9 @@ export function Inbox() {
       setLoading(true);
       setError(null);
       try {
-        const r = await fetch(`${API_BASE}/api/logs?limit=100&sort=desc`);
+        const r = await fetch(
+          `${API_BASE}${ENDPOINTS.logs}?limit=100&sort=desc`,
+        );
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const d = await r.json();
         setItems(d.entries ?? []);

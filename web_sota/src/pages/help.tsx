@@ -7,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { API_BASE } from "@/lib/api";
+import { API_BASE, ENDPOINTS } from "@/lib/api";
 
 type Capabilities = {
   server?: { name?: string; version?: string; fastmcp?: string };
@@ -59,7 +59,7 @@ export function Help() {
     (async () => {
       setLoading(true);
       try {
-        const r = await fetch(`${API_BASE}/api/capabilities`);
+        const r = await fetch(`${API_BASE}${ENDPOINTS.capabilities}`);
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         setCaps(await r.json());
       } catch (e) {

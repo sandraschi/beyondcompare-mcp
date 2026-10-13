@@ -7,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { API_BASE } from "@/lib/api";
+import { API_BASE, ENDPOINTS } from "@/lib/api";
 
 type Skill = {
   name: string;
@@ -27,7 +27,7 @@ export function Skills() {
       setLoading(true);
       setError(null);
       try {
-        const r = await fetch(`${API_BASE}/api/skills`);
+        const r = await fetch(`${API_BASE}${ENDPOINTS.skills}`);
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const d = await r.json();
         const list: Skill[] = d.skills ?? [];

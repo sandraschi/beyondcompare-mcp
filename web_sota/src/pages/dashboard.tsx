@@ -4,7 +4,7 @@ import { Activity, Box, Cpu, GitMerge, Rocket } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { API_BASE, fetchHealth } from "@/lib/api";
+import { API_BASE, ENDPOINTS, fetchHealth } from "@/lib/api";
 
 export function Dashboard() {
   const health = useQuery({
@@ -16,7 +16,7 @@ export function Dashboard() {
     queryKey: ["onboarding"],
     queryFn: async () => {
       try {
-        const r = await fetch(`${API_BASE}/api/llm/onboarding`);
+        const r = await fetch(`${API_BASE}${ENDPOINTS.llmOnboarding}`);
         if (!r.ok) return null;
         return r.json();
       } catch {

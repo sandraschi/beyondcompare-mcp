@@ -5,7 +5,7 @@ import { ExternalLink, HelpCircle, LayoutGrid, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { APPS_CATALOG, type AppEntry } from "@/common/apps-catalog";
-import { API_BASE } from "@/lib/api";
+import { API_BASE, ENDPOINTS } from "@/lib/api";
 import { useConnection } from "@/store/connection";
 
 export function Topbar() {
@@ -16,7 +16,7 @@ export function Topbar() {
   useEffect(() => {
     (async () => {
       try {
-        const r = await fetch(`${API_BASE}/api/fleet/apps`);
+        const r = await fetch(`${API_BASE}${ENDPOINTS.fleetApps}`);
         if (!r.ok) return;
         const data = await r.json();
         const live = data?.apps;
