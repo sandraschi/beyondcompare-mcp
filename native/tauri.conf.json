@@ -28,6 +28,7 @@
         "icon": ["icons/icon.png", "icons/icon.ico"],
         "resources": [
             "resources/beyondcompare-mcp-backend.exe",
+            "resources/install-mcp-clients.ps1",
             "resources/.env.example"],
         "windows": {
             "webviewInstallMode": {
@@ -41,10 +42,3 @@
     },
     "plugins": {}
 }
-
-
-
-
-
-
-
