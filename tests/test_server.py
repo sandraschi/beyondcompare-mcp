@@ -11,6 +11,7 @@ def test_server_import():
     try:
         from beyondcompare_mcp.server import BeyondCompareMCP
 
+        assert BeyondCompareMCP is not None
         print("✅ Server import successful")
         return True
     except ImportError as e:

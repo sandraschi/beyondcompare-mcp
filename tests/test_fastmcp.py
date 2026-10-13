@@ -29,6 +29,7 @@ def test_fastmcp_import():
     try:
         from fastmcp.server import FastMCP
 
+        assert FastMCP is not None
         print("✅ Server import: from fastmcp.server import FastMCP")
         return True
     except ImportError as e:

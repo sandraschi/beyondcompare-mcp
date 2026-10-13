@@ -29,6 +29,7 @@ def test_imports():
     try:
         from fastmcp import FastMCP
 
+        assert FastMCP is not None
         print("✅ FastMCP import successful")
         results.append(True)
     except ImportError as e:
@@ -39,6 +40,7 @@ def test_imports():
     try:
         import mcp
 
+        assert mcp is not None
         print("✅ MCP SDK import successful")
         results.append(True)
     except ImportError as e:

@@ -266,6 +266,7 @@ def test_environment_requirements():
             import mcp
             import pydantic
 
+            assert all(mod is not None for mod in (anyio, fastmcp, mcp, pydantic))
             print("✅ All required packages importable")
         except ImportError as e:
             print(f"❌ Missing required package: {e}")
