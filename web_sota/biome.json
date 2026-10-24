@@ -1,43 +1,43 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.13/schema.json",
-  "vcs": {
-    "enabled": false,
-    "clientKind": "git",
-    "useIgnoreFile": true
-  },
-  "files": {
-    "ignoreUnknown": false,
-    "includes": [
-      "**",
-      "!**/dist",
-      "!**/node_modules",
-      "!**/build",
-      "!**/coverage",
-      "!**/*.css",
-      "!**/test-results",
-      "!**/playwright-report"
-    ]
-  },
-  "formatter": {
-    "enabled": true,
-    "indentStyle": "space"
-  },
-  "linter": {
-    "enabled": true,
-    "rules": {
-      "recommended": true,
-      "suspicious": {
-        "noExplicitAny": "warn"
-      },
-      "correctness": {
-        "useExhaustiveDependencies": "warn"
-      }
-    }
-  },
-  "overrides": [],
-  "javascript": {
-    "formatter": {
-      "quoteStyle": "double"
-    }
-  }
+	"$schema": "https://biomejs.dev/schemas/2.4.13/schema.json",
+	"vcs": {
+		"enabled": false,
+		"clientKind": "git",
+		"useIgnoreFile": true
+	},
+	"files": {
+		"ignoreUnknown": false,
+		"includes": [
+			"**",
+			"!**/dist",
+			"!**/node_modules",
+			"!**/build",
+			"!**/coverage",
+			"!**/*.css",
+			"!**/test-results",
+			"!**/playwright-report"
+		]
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "space"
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true,
+			"suspicious": {
+				"noExplicitAny": "warn"
+			},
+			"correctness": {
+				"useExhaustiveDependencies": "warn"
+			}
+		}
+	},
+	"overrides": [],
+	"javascript": {
+		"formatter": {
+			"quoteStyle": "double"
+		}
+	}
 }
