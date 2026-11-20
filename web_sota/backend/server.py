@@ -1,4 +1,5 @@
 """Full FastAPI backend for the web dashboard — health, logs, settings."""
+
 import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -20,19 +21,36 @@ async def lifespan(app: FastAPI):
     yield
     activity_log.info("server", "Backend stopped")
 
-app = FastAPI(title="beyondcompare-mcp-backend", version="0.1.0", lifespan=lifespan,
-              docs_url="/docs", redoc_url="/redoc")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+app = FastAPI(
+    title="beyondcompare-mcp-backend", version="0.1.0", lifespan=lifespan, docs_url="/docs", redoc_url="/redoc"
+)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://127.0.0.1:10840",
+        "http://localhost:10840",
+        "tauri://localhost",
+        "http://tauri.localhost",
+        "https://tauri.localhost",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.include_router(logging_router)
+
 
 @app.get("/health")
 @app.get("/api/health")
 async def health():
     return {"status": "ok", "service": "beyondcompare-mcp-backend"}
 
+
 @app.get("/api/llm/providers")
 async def llm_providers():
     import httpx
+
     result = {}
     for name, url in [("ollama", "http://127.0.0.1:11434/api/tags"), ("lm_studio", "http://127.0.0.1:1234/v1/models")]:
         try:
@@ -50,4 +68,3 @@ async def llm_providers():
     if not any(result.values()):
         result["ollama"] = [{"name": "llama3.2:3b"}]
     return result
-
